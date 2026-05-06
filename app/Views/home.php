@@ -1,6 +1,5 @@
 <?php
 
-use Browser\Core\Csrf;
 use Browser\Core\View;
 
 $homeData = $homeData ?? [];
@@ -20,8 +19,7 @@ $secondaryCta = $homeData['secondaryCta'] ?? ['label' => 'Probar buscador', 'url
         <a class="button secondary" href="<?= View::e($secondaryCta['url']) ?>"><?= View::e($secondaryCta['label']) ?></a>
     </div>
 
-    <form class="search-form" method="post" action="/search" aria-label="Formulario de búsqueda Browser">
-        <?= Csrf::field() ?>
+    <form class="search-form" method="get" action="/" aria-label="Formulario de búsqueda Browser">
         <label for="home-search" class="sr-only">Buscar en Browser</label>
         <input id="home-search" class="input search-input" type="search" name="q" placeholder="Buscar en Browser..." autocomplete="off" required>
         <button class="button" type="submit">Buscar</button>

@@ -15,10 +15,14 @@ final class SearchController extends Controller
 {
     public function index(Request $request): void
     {
+        $query = trim((string) $request->input('q', ''));
+        $searchData = (new SearchService())->search($query, $request);
+
         $this->view('search/index', [
             'title' => 'Buscador',
-            'query' => '',
-            'results' => [],
+            'query' => $query,
+            'results' => $searchData['results'],
+            'directNavigation' => $searchData['directNavigation'],
         ]);
     }
 
@@ -30,11 +34,6 @@ final class SearchController extends Controller
         }
 
         $query = trim((string)$request->post('q'));
-
-        $this->view('search/index', [
-            'title' => 'Buscador',
-            'query' => $query,
-            'results' => (new SearchService())->search($query),
-        ]);
+        Response::redirect('/search?q=' . urlencode($query));
     }
 }
