@@ -6,6 +6,7 @@ namespace Browser\Console;
 
 use Browser\Core\Database;
 use Browser\Core\Env;
+use Browser\Core\Session;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -29,6 +30,7 @@ final class Kernel
             'migrate' => $this->migrate(),
             'seed' => $this->seed(),
             'doctor' => $this->doctor(),
+            'auth:doctor' => $this->authDoctor(),
             'admin:create' => $this->adminCreate(),
             'help', '--help', '-h' => $this->help(),
             default => $this->unknown($command),
@@ -43,6 +45,7 @@ final class Kernel
         $this->line('  migrate       Ejecuta migraciones SQL pendientes');
         $this->line('  seed          Ejecuta seeders SQL');
         $this->line('  doctor        Diagnostica el entorno del servidor');
+        $this->line('  auth:doctor   Diagnóstico seguro de autenticación/sesión');
         $this->line('  admin:create  Crea o promueve usuario admin');
 
         return 0;
@@ -257,6 +260,33 @@ final class Kernel
             $this->line('[FAIL] No se pudo conectar a la base de datos.');
             return 1;
         }
+    }
+
+    private function authDoctor(): int
+    {
+        Env::load(BASE_PATH);
+
+        $appEnv = (string) ($_ENV['APP_ENV'] ?? 'undefined');
+        $appUrl = (string) ($_ENV['APP_URL'] ?? 'undefined');
+        $sessionName = (string) ($_ENV['SESSION_NAME'] ?? 'BROWSER_SESSION');
+        $savePath = (string) session_save_path();
+        $cookieSecure = $appEnv === 'production' ? (Session::isHttpsRequest() ? 'true' : 'false') : 'false';
+
+        $this->line('[OK] APP_ENV=' . $appEnv);
+        $this->line('[OK] APP_URL=' . $appUrl);
+        $this->line('[OK] SESSION_NAME=' . $sessionName);
+        $this->line('[OK] HTTPS detected=' . (Session::isHttpsRequest() ? 'true' : 'false'));
+        $this->line('[OK] session.save_path=' . ($savePath !== '' ? $savePath : '(default)'));
+        $this->line('[OK] session.save_path writable=' . (is_writable($savePath !== '' ? $savePath : sys_get_temp_dir()) ? 'true' : 'false'));
+        $this->line('[OK] cookie.secure=' . $cookieSecure);
+        $this->line('[OK] cookie.httponly=true');
+        $this->line('[OK] cookie.samesite=Lax');
+
+        if ($appEnv === 'production' && !Session::isHttpsRequest()) {
+            $this->line('[WARN] Producción sin HTTPS detectado: la cookie de sesión no se marcará como Secure en esta solicitud.');
+        }
+
+        return 0;
     }
 
     private function ensureSchemaMigrationsTable(PDO $pdo): void

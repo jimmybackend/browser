@@ -23,7 +23,8 @@ final class AuthController extends Controller
     public function register(Request $request): void
     {
         if (!Csrf::validate((string)$request->post('_csrf_token'))) {
-            Session::flash('error', 'Token CSRF inválido.');
+            Session::flash('error', 'CSRF inválido. Recarga la página e intenta de nuevo.');
+            $this->logAuthWarning('register_csrf_invalid');
             Response::redirect('/register');
         }
 
@@ -40,7 +41,8 @@ final class AuthController extends Controller
             || !Validator::minLength($password, 12)
             || !hash_equals($password, $passwordConfirmation)
         ) {
-            Session::flash('error', 'Revisa usuario, correo, contraseña y confirmación.');
+            Session::flash('error', 'Revisa usuario, correo, contraseña (mínimo 12) y confirmación.');
+            $this->logAuthWarning('register_validation_failed', ['email' => $email, 'username' => $username]);
             Response::redirect('/register');
         }
 
@@ -51,9 +53,11 @@ final class AuthController extends Controller
             Response::redirect('/dashboard');
         } catch (\RuntimeException $exception) {
             Session::flash('error', $exception->getMessage());
+            $this->logAuthWarning('register_business_rule', ['email' => $email, 'message' => $exception->getMessage()]);
             Response::redirect('/register');
         } catch (\Throwable $exception) {
-            Session::flash('error', 'No se pudo crear la cuenta.');
+            Session::flash('error', 'Error de registro. Intenta nuevamente.');
+            $this->logAuthWarning('register_unexpected_error', ['email' => $email, 'exception' => $exception::class]);
             Response::redirect('/register');
         }
     }
@@ -66,7 +70,8 @@ final class AuthController extends Controller
     public function login(Request $request): void
     {
         if (!Csrf::validate((string)$request->post('_csrf_token'))) {
-            Session::flash('error', 'Token CSRF inválido.');
+            Session::flash('error', 'CSRF inválido. Recarga la página e intenta de nuevo.');
+            $this->logAuthWarning('login_csrf_invalid');
             Response::redirect('/login');
         }
 
@@ -77,6 +82,7 @@ final class AuthController extends Controller
 
         if (!$user) {
             Session::flash('error', 'Credenciales inválidas.');
+            $this->logAuthWarning('login_invalid_credentials', ['email' => $email]);
             Response::redirect('/login');
         }
 
@@ -87,11 +93,25 @@ final class AuthController extends Controller
     public function logout(Request $request): void
     {
         if (!Csrf::validate((string)$request->post('_csrf_token'))) {
-            Session::flash('error', 'Token CSRF inválido.');
+            Session::flash('error', 'CSRF inválido. Recarga la página e intenta de nuevo.');
+            $this->logAuthWarning('logout_csrf_invalid');
             Response::redirect('/dashboard');
         }
 
         Auth::logout();
         Response::redirect('/');
+    }
+
+    private function logAuthWarning(string $event, array $context = []): void
+    {
+        $safeContext = [];
+        foreach ($context as $key => $value) {
+            if (in_array($key, ['password', '_csrf_token', 'token'], true)) {
+                continue;
+            }
+            $safeContext[$key] = $value;
+        }
+
+        error_log('[auth] ' . $event . ' ' . json_encode($safeContext, JSON_UNESCAPED_UNICODE));
     }
 }

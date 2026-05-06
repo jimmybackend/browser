@@ -6,6 +6,22 @@ namespace Browser\Core;
 
 final class Session
 {
+    public static function isHttpsRequest(): bool
+    {
+        $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+        if ($https !== '' && $https !== 'off') {
+            return true;
+        }
+
+        if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+            return true;
+        }
+
+        $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? ''));
+
+        return $forwardedProto === 'https';
+    }
+
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -13,7 +29,7 @@ final class Session
         }
 
         $appEnv = $_ENV['APP_ENV'] ?? 'local';
-        $secure = $appEnv === 'production';
+        $secure = $appEnv === 'production' ? self::isHttpsRequest() : false;
 
         session_name($_ENV['SESSION_NAME'] ?? 'BROWSER_SESSION');
 
@@ -27,6 +43,11 @@ final class Session
         ]);
 
         session_start();
+    }
+
+    public static function shouldForceHttps(): bool
+    {
+        return ($_ENV['APP_ENV'] ?? 'local') === 'production' && !self::isHttpsRequest();
     }
 
     public static function regenerate(): void
