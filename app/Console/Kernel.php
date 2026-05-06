@@ -10,6 +10,7 @@ use Browser\Core\Session;
 use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
 use Browser\Services\RobotsTxtService;
+use Browser\Services\SearchService;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -102,6 +103,7 @@ final class Kernel
                 $pdo->beginTransaction();
                 try {
                     $pdo->exec($sql);
+                    $this->runPostMigrationAdjustments($pdo, $migration);
                     $record = $pdo->prepare('INSERT INTO schema_migrations (migration) VALUES (:migration)');
                     $record->execute(['migration' => $migration]);
                     $pdo->commit();
@@ -211,13 +213,33 @@ final class Kernel
     private function crawlAdd(): int
     {
         Env::load(BASE_PATH);
-        $seedUrl = trim((string) readline('URL inicial: '));
-        $maxDepth = (int) (trim((string) readline('max_depth [2]: ')) ?: '2');
-        $maxPages = (int) (trim((string) readline('max_pages [25]: ')) ?: '25');
-        if ($seedUrl === '') {
+        $seedUrlInput = trim((string) readline('URL inicial: '));
+        $maxDepthInput = trim((string) readline('max_depth [2]: '));
+        $maxPagesInput = trim((string) readline('max_pages [25]: '));
+        if ($seedUrlInput === '') {
             $this->line('[FAIL] URL inicial requerida.');
             return 1;
         }
+
+        $seedUrl = $this->normalizeSafeSeedUrl($seedUrlInput);
+        if ($seedUrl === null) {
+            $this->line('[FAIL] URL inicial inválida o bloqueada.');
+            return 1;
+        }
+
+        if (!$this->isIntegerInRange($maxDepthInput, 0, 5, true)) {
+            $this->line('[FAIL] max_depth debe ser entero entre 0 y 5.');
+            return 1;
+        }
+
+        if (!$this->isIntegerInRange($maxPagesInput, 1, 100, true)) {
+            $this->line('[FAIL] max_pages debe ser entero entre 1 y 100.');
+            return 1;
+        }
+
+        $maxDepth = (int) ($maxDepthInput !== '' ? $maxDepthInput : '2');
+        $maxPages = (int) ($maxPagesInput !== '' ? $maxPagesInput : '25');
+
         try {
             $jobId = CrawlJob::create($seedUrl, $maxDepth, $maxPages);
             $this->line("[OK] Job creado con ID {$jobId}.");
@@ -499,6 +521,77 @@ final class Kernel
         $this->line(($condition ? '[OK] ' : '[FAIL] ') . $label);
 
         return $condition;
+    }
+
+
+    private function runPostMigrationAdjustments(PDO $pdo, string $migration): void
+    {
+        if ($migration !== '004_crawl_urls.sql') {
+            return;
+        }
+
+        if ($this->columnExists($pdo, 'crawl_jobs', 'max_pages')) {
+            return;
+        }
+
+        $pdo->exec('ALTER TABLE crawl_jobs ADD COLUMN max_pages INT UNSIGNED NOT NULL DEFAULT 25 AFTER max_depth');
+    }
+
+    private function columnExists(PDO $pdo, string $table, string $column): bool
+    {
+        $statement = $pdo->prepare(
+            'SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column LIMIT 1'
+        );
+        $statement->execute(['table' => $table, 'column' => $column]);
+
+        return (bool) $statement->fetchColumn();
+    }
+
+    private function isIntegerInRange(string $value, int $min, int $max, bool $allowEmptyAsDefault): bool
+    {
+        if ($value === '') {
+            return $allowEmptyAsDefault;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            return false;
+        }
+
+        $intValue = (int) $value;
+
+        return $intValue >= $min && $intValue <= $max;
+    }
+
+    private function normalizeSafeSeedUrl(string $seedUrl): ?string
+    {
+        $normalized = (new SearchService())->resolveNavigableUrl($seedUrl);
+        if ($normalized === null) {
+            return null;
+        }
+
+        $parts = parse_url($normalized);
+        if ($parts === false) {
+            return null;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '' || in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return null;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false
+            && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return null;
+        }
+
+        $ips = gethostbynamel($host) ?: [];
+        foreach ($ips as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return null;
+            }
+        }
+
+        return $normalized;
     }
 
     private function line(string $message): void
