@@ -7,6 +7,7 @@ namespace Browser\Controllers;
 use Browser\Core\Auth;
 use Browser\Core\Controller;
 use Browser\Core\Request;
+use Browser\Models\UserRole;
 
 final class DashboardController extends Controller
 {
@@ -17,6 +18,7 @@ final class DashboardController extends Controller
         $this->view('dashboard/index', [
             'title' => 'Dashboard',
             'user' => Auth::user(),
+            'roles' => Auth::id() !== null ? UserRole::rolesForUser((int) Auth::id()) : [],
         ]);
     }
 }
