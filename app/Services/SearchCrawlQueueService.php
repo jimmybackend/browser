@@ -24,6 +24,10 @@ final class SearchCrawlQueueService
 
     public function maybeQueueCrawlForDomain(string $query, ?int $userId, ?string $ip): void
     {
+        if (trim($query) === '') {
+            return;
+        }
+
         if (!$this->isEnabledForActor($userId)) {
             return;
         }
@@ -53,7 +57,7 @@ final class SearchCrawlQueueService
 
             $this->createQueuedJob($seedUrl, $userId, $ip);
         } catch (Throwable $exception) {
-            error_log('[SearchCrawlQueueService] queue skipped: ' . mb_substr($exception->getMessage(), 0, 200));
+            error_log('[SearchCrawlQueueService] queue skipped: ' . $this->safeLogMessage($exception->getMessage()));
         }
     }
 
@@ -114,20 +118,20 @@ final class SearchCrawlQueueService
     private function hasRecentJob(string $domain): bool
     {
         $statement = Database::connection()->prepare(
-            'SELECT 1
-             FROM crawl_jobs
-             WHERE created_at >= (NOW() - INTERVAL :hours HOUR)
-               AND (seed_url = :https_seed OR seed_url = :http_seed OR seed_url LIKE :domain_like)
-             LIMIT 1'
+            'SELECT seed_url FROM crawl_jobs WHERE created_at >= (NOW() - INTERVAL :hours HOUR)'
         );
         $statement->execute([
             'hours' => self::RECENT_JOB_HOURS,
-            'https_seed' => 'https://' . $domain,
-            'http_seed' => 'http://' . $domain,
-            'domain_like' => '%://' . $domain . '%',
         ]);
 
-        return (bool) $statement->fetchColumn();
+        foreach ($statement->fetchAll(\PDO::FETCH_COLUMN) ?: [] as $seedUrl) {
+            $jobHost = strtolower((string) parse_url((string) $seedUrl, PHP_URL_HOST));
+            if ($jobHost === strtolower($domain)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function withinRateLimits(string $domain, ?int $userId, ?string $ip): bool
@@ -206,5 +210,10 @@ final class SearchCrawlQueueService
         $statement->execute(['domain_like' => '%://' . $domain . '%']);
 
         return (int) $statement->fetchColumn();
+    }
+
+    private function safeLogMessage(string $message): string
+    {
+        return mb_substr(preg_replace('/[^\P{C}\n\t]/u', '', $message) ?? 'unknown error', 0, 200);
     }
 }

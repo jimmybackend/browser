@@ -15,6 +15,3 @@ CREATE TABLE IF NOT EXISTS crawl_urls (
     INDEX idx_crawl_urls_job_status_depth (crawl_job_id, status, depth),
     FOREIGN KEY (crawl_job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-ALTER TABLE crawl_jobs
-    ADD COLUMN IF NOT EXISTS max_pages INT UNSIGNED NOT NULL DEFAULT 25 AFTER max_depth;
