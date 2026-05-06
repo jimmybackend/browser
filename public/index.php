@@ -7,6 +7,7 @@ use Browser\Controllers\AuthController;
 use Browser\Controllers\DashboardController;
 use Browser\Controllers\HomeController;
 use Browser\Controllers\MailController;
+use Browser\Controllers\ProfileController;
 use Browser\Controllers\MarketingController;
 use Browser\Controllers\SearchController;
 use Browser\Core\Env;
@@ -32,6 +33,8 @@ $router->post('/login', [AuthController::class, 'login']);
 $router->post('/logout', [AuthController::class, 'logout']);
 
 $router->get('/dashboard', [DashboardController::class, 'index']);
+$router->get('/profile', [ProfileController::class, 'index']);
+$router->post('/profile', [ProfileController::class, 'update']);
 
 $router->get('/mail', [MailController::class, 'index']);
 $router->get('/search', [SearchController::class, 'index']);
