@@ -19,6 +19,8 @@ use Browser\Core\View;
                 <h2><?= View::e($result['title']) ?></h2>
                 <p class="muted"><?= View::e($result['url']) ?></p>
                 <p><?= View::e($result['description']) ?></p>
+                <p class="muted">Señales internas: relevancia=<?= View::e((string)$result['relevance_signal']) ?>, confianza=<?= View::e((string)$result['trust_signal']) ?>, seguridad=<?= View::e((string)$result['safety_signal']) ?></p>
+                <p class="muted">Etiquetas visibles: <?= View::e($result['relevance_label']) ?> / <?= View::e($result['trust_label']) ?> / <?= View::e($result['safety_label']) ?></p>
             </article>
         <?php endforeach; ?>
     </section>

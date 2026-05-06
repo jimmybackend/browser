@@ -77,3 +77,33 @@ browser/
 ├── docker-compose.yml
 ├── LICENSE
 └── README.md
+
+## Protocolo ternario interno para IA
+
+Browser incorpora un protocolo ternario para representar decisiones internas con valores numéricos estables en lugar de texto libre.
+
+### ¿Qué es?
+Es una convención de señales con tres estados fijos:
+
+- `+1` = aceptar / positivo / relevante
+- `0` = pendiente / neutral / desconocido
+- `-1` = rechazar / negativo / riesgoso
+
+### ¿Por qué usar +1, 0 y -1?
+- Reduce ambigüedad semántica entre módulos y entre humano/IA.
+- Simplifica validaciones, filtros y reglas de negocio.
+- Evita depender de comparaciones de texto como "aprobado", "rechazado" o "pendiente".
+
+### ¿Cómo ayuda al buscador manejado por IA?
+Permite que el buscador evalúe resultados usando señales internas consistentes (por ejemplo relevancia, confianza y seguridad) y no etiquetas textuales variables.
+
+### ¿Cómo evita comparar textos humanos?
+La lógica interna compara enteros (`-1`, `0`, `1`). Las etiquetas humanas son solo una capa de visualización para UI o reportes.
+
+### Uso previsto por área
+- **Búsqueda**: relevancia, coincidencia de intención, confianza de fuente.
+- **Seguridad y privacidad**: seguridad de contenido, riesgo de spam, señales de riesgo.
+- **Correo**: riesgo de entrega de email.
+- **Marketing**: calidad de lead y priorización comercial.
+
+Regla base: los textos humanos son etiquetas visibles; la decisión interna siempre se ejecuta con valores numéricos ternarios.
