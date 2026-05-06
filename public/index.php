@@ -42,5 +42,9 @@ $router->post('/search', [SearchController::class, 'search']);
 
 $router->get('/marketing', [MarketingController::class, 'index']);
 $router->get('/admin', [AdminController::class, 'index']);
+$router->get('/admin/users', [AdminController::class, 'users']);
+$router->get('/admin/users/show', [AdminController::class, 'showUser']);
+$router->get('/admin/users/roles', [AdminController::class, 'editUserRoles']);
+$router->post('/admin/users/roles', [AdminController::class, 'updateUserRoles']);
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/');
