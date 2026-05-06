@@ -14,6 +14,19 @@ final class HomeController extends Controller
 {
     public function index(Request $request): void
     {
+        $query = trim((string) $request->input('q', ''));
+        if ($query !== '') {
+            $searchData = (new SearchService())->search($query, $request);
+            $this->view('search/index', [
+                'title' => 'Buscador',
+                'query' => $query,
+                'results' => $searchData['results'],
+                'directNavigation' => $searchData['directNavigation'],
+            ]);
+
+            return;
+        }
+
         $user = Auth::user();
 
         $this->view('home', [
