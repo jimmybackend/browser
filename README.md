@@ -107,3 +107,18 @@ La lógica interna compara enteros (`-1`, `0`, `1`). Las etiquetas humanas son s
 - **Marketing**: calidad de lead y priorización comercial.
 
 Regla base: los textos humanos son etiquetas visibles; la decisión interna siempre se ejecuta con valores numéricos ternarios.
+
+## Instalación en servidor sin Docker
+
+Para una instalación productiva en Ubuntu con Nginx, PHP-FPM y MySQL remoto, sigue la guía:
+
+- [`docs/UBUNTU_NGINX_PHP_INSTALL.md`](docs/UBUNTU_NGINX_PHP_INSTALL.md)
+
+Comandos CLI principales:
+
+```bash
+php bin/browser doctor
+php bin/browser migrate
+php bin/browser seed
+php bin/browser admin:create
+```

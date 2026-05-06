@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+define('BASE_PATH', dirname(__DIR__));
+
+$autoload = BASE_PATH . '/vendor/autoload.php';
+if (!file_exists($autoload)) {
+    fwrite(STDERR, "vendor/autoload.php no existe. Ejecuta composer install primero." . PHP_EOL);
+    exit(1);
+}
+
+require $autoload;
+
+$kernel = new Browser\Console\Kernel();
+exit($kernel->handle($argv));
