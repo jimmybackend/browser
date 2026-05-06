@@ -12,6 +12,7 @@ use Browser\Core\View;
         <article class="card">
             <h2><?= View::e($title) ?></h2>
             <?php if ($title === 'Clientes'): ?><p><a class="button" href="/marketing/clients">Abrir Clientes</a></p><?php endif; ?>
+            <?php if ($title === 'Campañas'): ?><p><a class="button" href="/marketing/campaigns">Abrir Campañas</a></p><?php endif; ?>
             <p><?= View::e($description) ?></p>
         </article>
     <?php endforeach; ?>
