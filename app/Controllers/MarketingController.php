@@ -17,6 +17,7 @@ final class MarketingController extends Controller
         $this->view('marketing/index', [
             'title' => 'Marketing',
             'cards' => (new MarketingService())->dashboardCards(),
+            'leadQualityExample' => (new MarketingService())->leadQualitySignalExample(),
         ]);
     }
 }

@@ -15,3 +15,12 @@ use Browser\Core\View;
         </article>
     <?php endforeach; ?>
 </section>
+
+
+<div class="card" style="margin-top: 24px;">
+    <h2>Señal ternaria de ejemplo (lead)</h2>
+    <p><strong>Clave:</strong> <?= View::e($leadQualityExample['signal_key']) ?></p>
+    <p><strong>Valor interno:</strong> <?= View::e((string)$leadQualityExample['signal_value']) ?></p>
+    <p><strong>Etiqueta visible:</strong> <?= View::e($leadQualityExample['signal_label']) ?></p>
+    <p class="muted"><?= View::e($leadQualityExample['human_hint']) ?></p>
+</div>
