@@ -18,11 +18,15 @@ final class SearchController extends Controller
         $query = trim((string) $request->input('q', ''));
         $service = new SearchService();
 
+        $directUrl = $query !== '' ? $service->resolveNavigableUrl($query) : null;
+        if ($directUrl !== null) {
+            Response::redirect($directUrl);
+        }
+
         $this->view('search/index', [
             'title' => 'Buscador',
             'query' => $query,
             'results' => $query !== '' ? $service->search($query, null, $request->ip()) : [],
-            'suggestedPages' => $service->suggestedPages(),
         ]);
     }
 

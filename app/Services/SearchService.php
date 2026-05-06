@@ -13,7 +13,21 @@ final class SearchService
 {
     private const MAX_QUERY_LENGTH = 160;
     private const RESULT_LIMIT = 20;
-    private const SUGGESTED_LIMIT = 8;
+    private const PRIVATE_IP_RANGES = [
+        ['0.0.0.0', '0.255.255.255'],
+        ['10.0.0.0', '10.255.255.255'],
+        ['100.64.0.0', '100.127.255.255'],
+        ['127.0.0.0', '127.255.255.255'],
+        ['169.254.0.0', '169.254.255.255'],
+        ['172.16.0.0', '172.31.255.255'],
+        ['192.0.0.0', '192.0.0.255'],
+        ['192.0.2.0', '192.0.2.255'],
+        ['192.168.0.0', '192.168.255.255'],
+        ['198.18.0.0', '198.19.255.255'],
+        ['198.51.100.0', '198.51.100.255'],
+        ['203.0.113.0', '203.0.113.255'],
+        ['224.0.0.0', '255.255.255.255'],
+    ];
 
     public function search(string $query, ?int $userId = null, ?string $ipAddress = null): array
     {
@@ -34,20 +48,100 @@ final class SearchService
         return array_map(fn (array $result): array => $this->mapSignals($result), $results);
     }
 
-    public function suggestedPages(int $limit = self::SUGGESTED_LIMIT): array
+    public function resolveNavigableUrl(string $query): ?string
     {
-        $statement = Database::connection()->prepare(
-            'SELECT url, domain, title, description, last_crawled_at
-             FROM indexed_pages
-             WHERE status = :status
-             ORDER BY COALESCE(last_crawled_at, updated_at, created_at) DESC
-             LIMIT :limit'
-        );
-        $statement->bindValue(':status', 'indexed');
-        $statement->bindValue(':limit', max(1, min($limit, self::RESULT_LIMIT)), PDO::PARAM_INT);
-        $statement->execute();
+        $candidate = trim($query);
+        if ($candidate === '') {
+            return null;
+        }
 
-        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (preg_match('/^[a-z][a-z0-9+\-.]*:/i', $candidate) === 1
+            && stripos($candidate, 'http://') !== 0
+            && stripos($candidate, 'https://') !== 0) {
+            return null;
+        }
+
+        if (stripos($candidate, 'http://') === 0 || stripos($candidate, 'https://') === 0) {
+            $url = $candidate;
+        } else {
+            $url = 'https://' . $candidate;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['host'])) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'https'));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        $host = strtolower(rtrim((string) $parts['host'], '.'));
+        if (!$this->isSafeHost($host)) {
+            return null;
+        }
+
+        return 'https://' . $host;
+    }
+
+    private function isSafeHost(string $host): bool
+    {
+        if ($host === 'localhost') {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+            return !$this->isReservedOrPrivateIpv4($host);
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+            return !$this->isReservedOrPrivateIpv6($host);
+        }
+
+        if (strpos($host, '..') !== false) {
+            return false;
+        }
+
+        return preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i', $host) === 1;
+    }
+
+    private function isReservedOrPrivateIpv4(string $ip): bool
+    {
+        $ipLong = ip2long($ip);
+        if ($ipLong === false) {
+            return true;
+        }
+
+        foreach (self::PRIVATE_IP_RANGES as [$start, $end]) {
+            $startLong = ip2long($start);
+            $endLong = ip2long($end);
+            if ($startLong === false || $endLong === false) {
+                continue;
+            }
+            if ($ipLong >= $startLong && $ipLong <= $endLong) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isReservedOrPrivateIpv6(string $ip): bool
+    {
+        if ($ip === '::1') {
+            return true;
+        }
+
+        if (str_starts_with($ip, 'fc') || str_starts_with($ip, 'fd')) {
+            return true;
+        }
+
+        if (str_starts_with($ip, 'fe80:')) {
+            return true;
+        }
+
+        return true;
     }
 
     private function normalizeQuery(string $query): string
