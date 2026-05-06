@@ -1,15 +1,18 @@
 <?php
 
+use Browser\Core\Csrf;
 use Browser\Core\View;
 
 $query = $query ?? '';
 $results = $results ?? [];
 ?>
 <div class="search-home card">
-    <h1>Buscador Browser</h1>
-    <form class="search-form-large" method="post" action="/search">
+    <p class="eyebrow">Browser</p>
+    <h1>Busca en Browser</h1>
+    <form class="search-form-large" method="post" action="/search" aria-label="Formulario de búsqueda Browser">
         <?= Csrf::field() ?>
-        <input class="input search-input-large" type="search" name="q" value="<?= View::e($query) ?>" placeholder="Buscar..." autocomplete="off" required>
+        <label for="search-q" class="sr-only">Buscar en Browser</label>
+        <input id="search-q" class="input search-input-large" type="search" name="q" value="<?= View::e($query) ?>" placeholder="Escribe una búsqueda o dominio" autocomplete="off" required>
         <button class="button" type="submit">Buscar</button>
     </form>
 </div>
@@ -19,14 +22,14 @@ $results = $results ?? [];
         <p class="muted">Resultados para: <strong><?= View::e($query) ?></strong></p>
 
         <?php if ($results === []): ?>
-            <p>No se encontraron resultados indexados para esta búsqueda.</p>
+            <p>No se encontraron resultados.</p>
         <?php else: ?>
             <div class="grid" style="margin-top: 16px;">
                 <?php foreach ($results as $result): ?>
                     <article class="card">
                         <h2><?= View::e($result['title'] ?: $result['domain']) ?></h2>
                         <p class="muted"><?= View::e($result['domain']) ?></p>
-                        <a href="<?= View::e($result['url']) ?>" target="_blank" rel="noopener noreferrer"><?= View::e($result['url']) ?></a>
+                        <a href="<?= View::e($result['url']) ?>" rel="noopener noreferrer"><?= View::e($result['url']) ?></a>
                         <p><?= View::e($result['description'] ?? '') ?></p>
                         <?php if (!empty($result['last_crawled_at'])): ?>
                             <p class="muted">Último rastreo: <?= View::e((string) $result['last_crawled_at']) ?></p>
