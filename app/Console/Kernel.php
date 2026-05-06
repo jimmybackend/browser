@@ -7,6 +7,9 @@ namespace Browser\Console;
 use Browser\Core\Database;
 use Browser\Core\Env;
 use Browser\Core\Session;
+use Browser\Models\CrawlJob;
+use Browser\Services\CrawlerService;
+use Browser\Services\RobotsTxtService;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -29,6 +32,9 @@ final class Kernel
         return match ($command) {
             'migrate' => $this->migrate(),
             'seed' => $this->seed(),
+            'crawl:add' => $this->crawlAdd(),
+            'crawl:run' => $this->crawlRun($argv),
+            'crawl:status' => $this->crawlStatus(),
             'doctor' => $this->doctor(),
             'auth:doctor' => $this->authDoctor(),
             'admin:create' => $this->adminCreate(),
@@ -47,6 +53,9 @@ final class Kernel
         $this->line('  doctor        Diagnostica el entorno del servidor');
         $this->line('  auth:doctor   Diagnóstico seguro de autenticación/sesión');
         $this->line('  admin:create  Crea o promueve usuario admin');
+        $this->line('  crawl:add     Crea un crawl job en estado queued');
+        $this->line('  crawl:run     Ejecuta jobs queued de crawler');
+        $this->line('  crawl:status  Muestra resumen de jobs crawler');
 
         return 0;
     }
@@ -197,6 +206,76 @@ final class Kernel
         }
 
         return $failed ? 1 : 0;
+    }
+
+    private function crawlAdd(): int
+    {
+        Env::load(BASE_PATH);
+        $seedUrl = trim((string) readline('URL inicial: '));
+        $maxDepth = (int) (trim((string) readline('max_depth [2]: ')) ?: '2');
+        $maxPages = (int) (trim((string) readline('max_pages [25]: ')) ?: '25');
+        if ($seedUrl === '') {
+            $this->line('[FAIL] URL inicial requerida.');
+            return 1;
+        }
+        try {
+            $jobId = CrawlJob::create($seedUrl, $maxDepth, $maxPages);
+            $this->line("[OK] Job creado con ID {$jobId}.");
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo crear el job.');
+            return 1;
+        }
+    }
+
+    private function crawlRun(array $argv): int
+    {
+        Env::load(BASE_PATH);
+        $limit = null;
+        $jobId = null;
+        foreach (array_slice($argv, 2) as $arg) {
+            if (str_starts_with($arg, '--limit=')) {
+                $limit = max(1, (int) substr($arg, 8));
+            }
+            if (str_starts_with($arg, '--job=')) {
+                $jobId = max(1, (int) substr($arg, 6));
+            }
+        }
+
+        $jobs = $jobId !== null ? array_filter([CrawlJob::find($jobId)]) : CrawlJob::queued($limit);
+        $crawler = new CrawlerService(new RobotsTxtService());
+
+        foreach ($jobs as $job) {
+            if (($job['status'] ?? '') !== 'queued') {
+                continue;
+            }
+            $id = (int) $job['id'];
+            CrawlJob::markRunning($id);
+            $this->line("[RUN] crawl job #{$id}");
+            try {
+                $stats = $crawler->runJob($job);
+                CrawlJob::markFinished($id, 'completed', (int) $stats['pages_found'], (int) $stats['pages_indexed']);
+                $this->line("[OK] crawl job #{$id} completed");
+            } catch (Throwable $exception) {
+                CrawlJob::markFinished($id, 'failed', 0, 0, mb_substr($exception->getMessage(), 0, 500));
+                $this->line("[FAIL] crawl job #{$id} failed");
+            }
+        }
+
+        return 0;
+    }
+
+    private function crawlStatus(): int
+    {
+        Env::load(BASE_PATH);
+        $summary = CrawlJob::statusSummary();
+        foreach ($summary as $row) {
+            $this->line(sprintf('%s: %d (último: %s)', $row['status'], $row['total'], $row['last_created_at'] ?? '-'));
+        }
+        if ($summary === []) {
+            $this->line('Sin jobs.');
+        }
+        return 0;
     }
 
     private function adminCreate(): int
