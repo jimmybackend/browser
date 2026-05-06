@@ -11,6 +11,7 @@ use Browser\Controllers\ProfileController;
 use Browser\Controllers\MarketingController;
 use Browser\Controllers\SearchController;
 use Browser\Controllers\MarketingClientController;
+use Browser\Controllers\MarketingCampaignController;
 use Browser\Core\Env;
 use Browser\Core\Router;
 use Browser\Core\Session;
@@ -51,6 +52,15 @@ $router->get('/marketing/clients/edit', [MarketingClientController::class, 'edit
 $router->post('/marketing/clients/update', [MarketingClientController::class, 'update']);
 $router->post('/marketing/clients/status', [MarketingClientController::class, 'status']);
 $router->post('/marketing/clients/delete', [MarketingClientController::class, 'delete']);
+
+$router->get('/marketing/campaigns', [MarketingCampaignController::class, 'index']);
+$router->get('/marketing/campaigns/create', [MarketingCampaignController::class, 'create']);
+$router->post('/marketing/campaigns/store', [MarketingCampaignController::class, 'store']);
+$router->get('/marketing/campaigns/show', [MarketingCampaignController::class, 'show']);
+$router->get('/marketing/campaigns/edit', [MarketingCampaignController::class, 'edit']);
+$router->post('/marketing/campaigns/update', [MarketingCampaignController::class, 'update']);
+$router->post('/marketing/campaigns/status', [MarketingCampaignController::class, 'status']);
+$router->post('/marketing/campaigns/delete', [MarketingCampaignController::class, 'delete']);
 $router->get('/admin', [AdminController::class, 'index']);
 $router->get('/admin/users', [AdminController::class, 'users']);
 $router->get('/admin/users/show', [AdminController::class, 'showUser']);

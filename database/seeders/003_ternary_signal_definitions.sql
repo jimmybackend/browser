@@ -14,7 +14,8 @@ INSERT INTO ternary_signal_definitions (
 ('spam_signal', 'security', 'limpio', 'desconocido', 'spam/sospechoso', 'Señal anti-spam para entradas y eventos.', 1),
 ('marketing_lead_quality', 'marketing', 'lead bueno', 'lead pendiente', 'lead débil/no calificado', 'Calidad del lead para priorización comercial.', 1),
 ('email_delivery_risk', 'mail', 'riesgo bajo', 'riesgo desconocido', 'riesgo alto', 'Riesgo de entrega para correo interno/futuro.', 1),
-('client_health_signal', 'marketing', 'cliente saludable', 'cliente prospecto/pendiente', 'cliente pausado/inactivo', 'Salud comercial del cliente según su estado actual.', 1)
+('client_health_signal', 'marketing', 'cliente saludable', 'cliente prospecto/pendiente', 'cliente pausado/inactivo', 'Salud comercial del cliente según su estado actual.', 1),
+('campaign_health_signal', 'marketing', 'campaña activa', 'campaña en borrador', 'campaña detenida/finalizada/cancelada', 'Salud operativa de campaña según su estado.', 1)
 ON DUPLICATE KEY UPDATE
     module = VALUES(module),
     positive_label = VALUES(positive_label),

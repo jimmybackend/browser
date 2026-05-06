@@ -39,3 +39,5 @@ La lógica de negocio debe operar con estos números como fuente principal de ve
 - Si se agregan columnas de señal, usar `TINYINT SIGNED` y `CHECK` cuando el motor lo soporte.
 - Evitar nuevos enums de texto cuando un valor ternario cubra la decisión.
 - Toda integración nueva debe exponer etiqueta humana solo en capa de presentación, nunca como lógica principal.
+
+- **Marketing**: salud de cliente (`client_health_signal`) y salud de campaña (`campaign_health_signal`).
