@@ -30,10 +30,17 @@ final class AuthController extends Controller
         $username = trim((string)$request->post('username'));
         $email = trim((string)$request->post('email'));
         $password = (string)$request->post('password');
+        $passwordConfirmation = (string)$request->post('password_confirmation');
         $displayName = trim((string)$request->post('display_name'));
 
-        if (!Validator::required($username) || !Validator::email($email) || !Validator::minLength($password, 12)) {
-            Session::flash('error', 'Revisa usuario, correo y contraseña. La contraseña debe tener mínimo 12 caracteres.');
+        if (
+            !Validator::required($username)
+            || !Validator::username($username)
+            || !Validator::email($email)
+            || !Validator::minLength($password, 12)
+            || !hash_equals($password, $passwordConfirmation)
+        ) {
+            Session::flash('error', 'Revisa usuario, correo, contraseña y confirmación.');
             Response::redirect('/register');
         }
 
@@ -42,8 +49,11 @@ final class AuthController extends Controller
             Auth::login($userId);
             Session::flash('success', 'Cuenta creada correctamente.');
             Response::redirect('/dashboard');
+        } catch (\RuntimeException $exception) {
+            Session::flash('error', $exception->getMessage());
+            Response::redirect('/register');
         } catch (\Throwable $exception) {
-            Session::flash('error', 'No se pudo crear la cuenta. Revisa que el usuario o correo no exista.');
+            Session::flash('error', 'No se pudo crear la cuenta.');
             Response::redirect('/register');
         }
     }
@@ -66,7 +76,7 @@ final class AuthController extends Controller
         $user = (new AuthService())->attempt($email, $password);
 
         if (!$user) {
-            Session::flash('error', 'Credenciales incorrectas.');
+            Session::flash('error', 'Credenciales inválidas.');
             Response::redirect('/login');
         }
 

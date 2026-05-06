@@ -14,7 +14,7 @@ use Browser\Core\Csrf;
 
         <label>
             Usuario
-            <input class="input" type="text" name="username" required maxlength="60">
+            <input class="input" type="text" name="username" required minlength="3" maxlength="60" pattern="[A-Za-z0-9_.-]+">
         </label>
 
         <label>
@@ -25,6 +25,11 @@ use Browser\Core\Csrf;
         <label>
             Contraseña
             <input class="input" type="password" name="password" required minlength="12">
+        </label>
+
+        <label>
+            Confirmar contraseña
+            <input class="input" type="password" name="password_confirmation" required minlength="12">
         </label>
 
         <button class="button" type="submit">Crear cuenta</button>

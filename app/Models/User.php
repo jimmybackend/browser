@@ -6,6 +6,7 @@ namespace Browser\Models;
 
 use Browser\Core\Database;
 use PDO;
+use Throwable;
 
 final class User
 {
@@ -33,23 +34,69 @@ final class User
         return $user ?: null;
     }
 
+    public static function existsByUsername(string $username): bool
+    {
+        $statement = Database::connection()->prepare('SELECT 1 FROM users WHERE username = :username LIMIT 1');
+        $statement->execute(['username' => $username]);
+
+        return (bool) $statement->fetchColumn();
+    }
+
     public static function create(string $username, string $email, string $passwordHash, ?string $displayName = null): int
     {
-        $statement = Database::connection()->prepare(
-            'INSERT INTO users (uuid, username, email, password_hash, display_name, status)
-             VALUES (:uuid, :username, :email, :password_hash, :display_name, :status)'
-        );
+        $connection = Database::connection();
+        $connection->beginTransaction();
 
-        $statement->execute([
-            'uuid' => self::uuid(),
-            'username' => $username,
-            'email' => $email,
-            'password_hash' => $passwordHash,
-            'display_name' => $displayName,
-            'status' => 'active',
-        ]);
+        try {
+            $statement = $connection->prepare(
+                'INSERT INTO users (uuid, username, email, password_hash, display_name, status)
+                 VALUES (:uuid, :username, :email, :password_hash, :display_name, :status)'
+            );
 
-        return (int)Database::connection()->lastInsertId();
+            $statement->execute([
+                'uuid' => self::uuid(),
+                'username' => $username,
+                'email' => $email,
+                'password_hash' => $passwordHash,
+                'display_name' => $displayName,
+                'status' => 'active',
+            ]);
+
+            $userId = (int) $connection->lastInsertId();
+
+            $pref = $connection->prepare(
+                'INSERT INTO user_preferences (user_id, search_history_enabled, email_notifications_enabled, theme, language, timezone)
+                 VALUES (:user_id, 0, 1, :theme, :language, :timezone)'
+            );
+            $pref->execute([
+                'user_id' => $userId,
+                'theme' => 'system',
+                'language' => 'es',
+                'timezone' => 'America/Mexico_City',
+            ]);
+
+            $roleId = $connection->prepare('SELECT id FROM roles WHERE name = :name LIMIT 1');
+            $roleId->execute(['name' => 'user']);
+            $userRoleId = $roleId->fetchColumn();
+
+            if ($userRoleId !== false) {
+                $roleAssign = $connection->prepare('INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)');
+                $roleAssign->execute(['user_id' => $userId, 'role_id' => (int) $userRoleId]);
+            }
+
+            $connection->commit();
+
+            return $userId;
+        } catch (Throwable $exception) {
+            $connection->rollBack();
+            throw $exception;
+        }
+    }
+
+    public static function updateLastLogin(int $id): void
+    {
+        $statement = Database::connection()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id');
+        $statement->execute(['id' => $id]);
     }
 
     private static function uuid(): string
