@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Browser\Controllers;
 
+use Browser\Core\Auth;
 use Browser\Core\Controller;
 use Browser\Core\Csrf;
 use Browser\Core\Request;
 use Browser\Core\Response;
 use Browser\Core\Session;
+use Browser\Services\SearchCrawlQueueService;
 use Browser\Services\SearchService;
 
 final class SearchController extends Controller
@@ -17,6 +19,11 @@ final class SearchController extends Controller
     {
         $query = trim((string) $request->input('q', ''));
         $service = new SearchService();
+        $crawlQueueService = new SearchCrawlQueueService($service);
+
+        if ($query !== '') {
+            $crawlQueueService->maybeQueueCrawlForDomain($query, Auth::id(), $request->ip());
+        }
 
         $directUrl = $query !== '' ? $service->resolveNavigableUrl($query) : null;
         if ($directUrl !== null) {
