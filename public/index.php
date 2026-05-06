@@ -10,6 +10,7 @@ use Browser\Controllers\MailController;
 use Browser\Controllers\ProfileController;
 use Browser\Controllers\MarketingController;
 use Browser\Controllers\SearchController;
+use Browser\Controllers\MarketingClientController;
 use Browser\Core\Env;
 use Browser\Core\Router;
 use Browser\Core\Session;
@@ -41,6 +42,15 @@ $router->get('/search', [SearchController::class, 'index']);
 $router->post('/search', [SearchController::class, 'search']);
 
 $router->get('/marketing', [MarketingController::class, 'index']);
+
+$router->get('/marketing/clients', [MarketingClientController::class, 'index']);
+$router->get('/marketing/clients/create', [MarketingClientController::class, 'create']);
+$router->post('/marketing/clients/store', [MarketingClientController::class, 'store']);
+$router->get('/marketing/clients/show', [MarketingClientController::class, 'show']);
+$router->get('/marketing/clients/edit', [MarketingClientController::class, 'edit']);
+$router->post('/marketing/clients/update', [MarketingClientController::class, 'update']);
+$router->post('/marketing/clients/status', [MarketingClientController::class, 'status']);
+$router->post('/marketing/clients/delete', [MarketingClientController::class, 'delete']);
 $router->get('/admin', [AdminController::class, 'index']);
 $router->get('/admin/users', [AdminController::class, 'users']);
 $router->get('/admin/users/show', [AdminController::class, 'showUser']);
