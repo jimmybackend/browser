@@ -3,10 +3,19 @@
 use Browser\Core\View;
 
 $query = $query ?? '';
-$results = $results ?? [];
 $suggestedPages = $suggestedPages ?? [];
 $user = $user ?? null;
 $isAdmin = $isAdmin ?? false;
+
+$manualSuggestions = [
+    ['domain' => 'google.com', 'url' => 'https://google.com', 'title' => 'Google', 'description' => 'Buscador web general.'],
+    ['domain' => 'chatgpt.com', 'url' => 'https://chatgpt.com', 'title' => 'ChatGPT', 'description' => 'Asistente conversacional de IA.'],
+    ['domain' => 'esforzados.com', 'url' => 'https://esforzados.com', 'title' => 'Esforzados', 'description' => 'Sitio sugerido manualmente.'],
+    ['domain' => 'youtube.com', 'url' => 'https://youtube.com', 'title' => 'YouTube', 'description' => 'Videos, canales y transmisiones.'],
+    ['domain' => 'wikipedia.org', 'url' => 'https://wikipedia.org', 'title' => 'Wikipedia', 'description' => 'Enciclopedia colaborativa.'],
+];
+
+$displaySuggestions = $suggestedPages === [] ? $manualSuggestions : $suggestedPages;
 ?>
 
 <section class="search-home card">
@@ -26,20 +35,20 @@ $isAdmin = $isAdmin ?? false;
 <section class="card">
     <h2>Páginas sugeridas</h2>
     <?php if ($suggestedPages === []): ?>
-        <p class="muted">Todavía no hay páginas indexadas.</p>
+        <p class="muted">No hay páginas en <code>indexed_pages</code> todavía. Mostramos sugerencias manuales seguras.</p>
         <?php if ($isAdmin): ?>
             <p class="muted">Como administrador, puedes poblar <code>indexed_pages</code> para habilitar resultados reales en el buscador.</p>
         <?php endif; ?>
-    <?php else: ?>
-        <div class="grid" style="margin-top: 16px;">
-            <?php foreach ($suggestedPages as $page): ?>
-                <article class="card">
-                    <h3 style="margin-top: 0;"><?= View::e($page['title'] ?: $page['domain']) ?></h3>
-                    <p class="muted"><?= View::e($page['domain']) ?></p>
-                    <p><?= View::e($page['description'] ?? '') ?></p>
-                    <a href="<?= View::e($page['url']) ?>" target="_blank" rel="noopener noreferrer"><?= View::e($page['url']) ?></a>
-                </article>
-            <?php endforeach; ?>
-        </div>
     <?php endif; ?>
+
+    <div class="grid" style="margin-top: 16px;">
+        <?php foreach ($displaySuggestions as $page): ?>
+            <article class="card">
+                <h3 style="margin-top: 0;"><?= View::e($page['title'] ?: $page['domain']) ?></h3>
+                <p class="muted"><?= View::e($page['domain']) ?></p>
+                <p><?= View::e($page['description'] ?? '') ?></p>
+                <a href="<?= View::e($page['url']) ?>" target="_blank" rel="noopener noreferrer"><?= View::e($page['url']) ?></a>
+            </article>
+        <?php endforeach; ?>
+    </div>
 </section>
