@@ -13,7 +13,7 @@ final class User
     public static function find(int $id): ?array
     {
         $statement = Database::connection()->prepare(
-            'SELECT id, uuid, username, email, display_name, status, created_at FROM users WHERE id = :id LIMIT 1'
+            'SELECT id, uuid, username, email, display_name, status, created_at, last_login_at FROM users WHERE id = :id LIMIT 1'
         );
         $statement->execute(['id' => $id]);
 

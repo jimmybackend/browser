@@ -32,7 +32,7 @@ use Browser\Core\View;
         <h2>Marketing</h2>
         <p class="muted">Clientes, campañas, leads y eventos.</p>
     </a>
-    <a class="card" href="/dashboard#perfil">
+    <a class="card" href="/profile">
         <h2>Perfil</h2>
         <p class="muted">Gestiona tus datos personales y preferencias.</p>
     </a>

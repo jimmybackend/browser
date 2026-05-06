@@ -6,15 +6,15 @@ namespace Browser\Middleware;
 
 use Browser\Core\Auth;
 use Browser\Core\Response;
+use Browser\Models\UserRole;
 
 final class AdminMiddleware
 {
     public static function handle(): void
     {
-        $user = Auth::user();
+        $userId = Auth::id();
 
-        // TODO: Validar roles desde user_roles cuando el módulo de permisos esté completo.
-        if (!$user || ($user['username'] ?? '') !== 'admin') {
+        if ($userId === null || !UserRole::userHasRole($userId, 'admin')) {
             Response::forbidden();
             exit;
         }

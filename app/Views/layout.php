@@ -28,6 +28,7 @@ $user = Auth::user();
             <a href="/marketing">Marketing</a>
             <?php if ($user): ?>
                 <a href="/dashboard">Dashboard</a>
+                <a href="/profile">Perfil</a>
                 <form method="post" action="/logout" class="logout-form" style="display:inline">
                     <?= Csrf::field() ?>
                     <button class="button secondary" type="submit">Salir</button>
