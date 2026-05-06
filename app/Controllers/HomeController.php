@@ -7,6 +7,7 @@ namespace Browser\Controllers;
 use Browser\Core\Auth;
 use Browser\Core\Controller;
 use Browser\Core\Request;
+use Browser\Models\UserRole;
 use Browser\Services\SearchService;
 
 final class HomeController extends Controller
@@ -29,20 +30,19 @@ final class HomeController extends Controller
         $user = Auth::user();
 
         $this->view('home', [
-            'title' => 'Browser - Plataforma independiente de búsqueda, correo y marketing',
-            'homeData' => [
-                'heroTitle' => 'Browser: búsqueda, correo y marketing en una plataforma independiente',
-                'heroSubtitle' => 'Una base web segura para construir servicios propios de búsqueda, comunicación, clientes, campañas y leads.',
-                'primaryCta' => [
-                    'label' => 'Crear cuenta',
-                    'url' => '/register',
-                ],
-                'secondaryCta' => [
-                    'label' => 'Probar buscador',
-                    'url' => '/search',
-                ],
-                'isAuthenticated' => $user !== null,
-            ],
+            'title' => 'Browser - Buscador independiente',
+            'query' => '',
+            'results' => [],
+            'suggestedPages' => (new SearchService())->suggestedPages(),
+            'isAdmin' => $user !== null && UserRole::userHasRole((int) $user['id'], 'admin'),
+            'user' => $user,
+        ]);
+    }
+
+    public function about(Request $request): void
+    {
+        $this->view('about', [
+            'title' => 'Acerca de Browser',
         ]);
     }
 }

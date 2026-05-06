@@ -41,6 +41,7 @@ Session::start();
 $router = new Router();
 
 $router->get('/', [HomeController::class, 'index']);
+$router->get('/about', [HomeController::class, 'about']);
 
 $router->get('/register', [AuthController::class, 'showRegister']);
 $router->post('/register', [AuthController::class, 'register']);

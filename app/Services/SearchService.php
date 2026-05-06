@@ -6,176 +6,134 @@ namespace Browser\Services;
 
 use Browser\Core\Auth;
 use Browser\Core\Database;
-use Browser\Core\Request;
 use Browser\Core\TernarySignal;
 use PDO;
 
 final class SearchService
 {
-    public function search(string $query, ?Request $request = null): array
+    private const MAX_QUERY_LENGTH = 160;
+    private const RESULT_LIMIT = 20;
+    private const SUGGESTED_LIMIT = 8;
+
+    public function search(string $query, ?int $userId = null, ?string $ipAddress = null): array
     {
-        $cleanQuery = trim($query);
-        if ($cleanQuery == '') {
-            return [
-                'directNavigation' => null,
-                'results' => [],
-                'resultsCount' => 0,
-            ];
+        $normalizedQuery = $this->normalizeQuery($query);
+
+        if ($normalizedQuery === '') {
+            return [];
         }
 
-        $directNavigation = $this->detectDirectNavigation($cleanQuery);
-        $indexedResults = $this->searchIndexedPages($cleanQuery);
+        $results = $this->runFulltextSearch($normalizedQuery);
 
-        $resultsCount = count($indexedResults) + ($directNavigation !== null ? 1 : 0);
-        $this->logSearchQuery($cleanQuery, $resultsCount, $request);
+        if ($results === []) {
+            $results = $this->runLikeFallbackSearch($normalizedQuery);
+        }
 
-        return [
-            'directNavigation' => $directNavigation,
-            'results' => $indexedResults,
-            'resultsCount' => $resultsCount,
-        ];
+        $this->logQuery($normalizedQuery, count($results), $userId ?? Auth::id(), $ipAddress);
+
+        return array_map(fn (array $result): array => $this->mapSignals($result), $results);
     }
 
-    public function detectDirectNavigation(string $query): ?array
-    {
-        $candidate = trim($query);
-        if ($candidate === '') {
-            return null;
-        }
-
-        if (preg_match('/^[a-z][a-z0-9+\-.]*:/i', $candidate) === 1 && stripos($candidate, 'http://') !== 0 && stripos($candidate, 'https://') !== 0) {
-            return null;
-        }
-
-        $rawUrl = $candidate;
-        if (!str_contains($candidate, '://')) {
-            $rawUrl = 'https://' . $candidate;
-        }
-
-        $normalizedUrl = filter_var($rawUrl, FILTER_VALIDATE_URL);
-        if (!is_string($normalizedUrl)) {
-            return null;
-        }
-
-        $parts = parse_url($normalizedUrl);
-        if (!is_array($parts)) {
-            return null;
-        }
-
-        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        if ($scheme !== 'http' && $scheme !== 'https') {
-            return null;
-        }
-
-        $host = strtolower((string) ($parts['host'] ?? ''));
-        if ($host === '' || !str_contains($host, '.')) {
-            return null;
-        }
-
-        if ($this->isBlockedHost($host)) {
-            return null;
-        }
-
-        $safeUrl = $scheme . '://' . $host;
-        if (isset($parts['port']) && is_int($parts['port'])) {
-            $safeUrl .= ':' . $parts['port'];
-        }
-        $path = (string) ($parts['path'] ?? '');
-        if ($path !== '') {
-            $safeUrl .= $path;
-        }
-        $queryString = (string) ($parts['query'] ?? '');
-        if ($queryString !== '') {
-            $safeUrl .= '?' . $queryString;
-        }
-        $fragment = (string) ($parts['fragment'] ?? '');
-        if ($fragment !== '') {
-            $safeUrl .= '#' . $fragment;
-        }
-
-        return [
-            'type' => 'direct_navigation',
-            'title' => 'Ir a ' . $host,
-            'url' => $safeUrl,
-            'domain' => $host,
-            'description' => 'Abrir este sitio directamente.',
-        ];
-    }
-
-    private function searchIndexedPages(string $query): array
+    public function suggestedPages(int $limit = self::SUGGESTED_LIMIT): array
     {
         $statement = Database::connection()->prepare(
-            'SELECT title, url, description
+            'SELECT url, domain, title, description, last_crawled_at
              FROM indexed_pages
              WHERE status = :status
-               AND MATCH(title, description, content_text) AGAINST (:query IN NATURAL LANGUAGE MODE)
-             ORDER BY last_crawled_at DESC, id DESC
-             LIMIT 20'
+             ORDER BY COALESCE(last_crawled_at, updated_at, created_at) DESC
+             LIMIT :limit'
         );
+        $statement->bindValue(':status', 'indexed');
+        $statement->bindValue(':limit', max(1, min($limit, self::RESULT_LIMIT)), PDO::PARAM_INT);
+        $statement->execute();
 
-        $statement->execute([
-            'status' => 'indexed',
-            'query' => $query,
-        ]);
-
-        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-        $results = [];
-        foreach ($rows as $row) {
-            $relevanceSignal = TernarySignal::POSITIVE;
-            $trustSignal = TernarySignal::NEUTRAL;
-            $safetySignal = TernarySignal::POSITIVE;
-
-            $results[] = [
-                'title' => (string) ($row['title'] ?? $row['url'] ?? 'Sin título'),
-                'url' => (string) ($row['url'] ?? ''),
-                'description' => (string) ($row['description'] ?? ''),
-                'relevance_signal' => $relevanceSignal,
-                'trust_signal' => $trustSignal,
-                'safety_signal' => $safetySignal,
-                'relevance_label' => TernarySignal::label($relevanceSignal),
-                'trust_label' => TernarySignal::label($trustSignal),
-                'safety_label' => TernarySignal::label($safetySignal),
-            ];
-        }
-
-        return $results;
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    private function logSearchQuery(string $query, int $resultsCount, ?Request $request): void
+    private function normalizeQuery(string $query): string
+    {
+        $query = trim(preg_replace('/\s+/', ' ', $query) ?? '');
+
+        if ($query === '') {
+            return '';
+        }
+
+        return mb_substr($query, 0, self::MAX_QUERY_LENGTH);
+    }
+
+    private function runFulltextSearch(string $query): array
     {
         $statement = Database::connection()->prepare(
-            'INSERT INTO search_queries (user_id, query_hash, results_count, ip_address)
-             VALUES (:user_id, :query_hash, :results_count, :ip_address)'
+            'SELECT url, domain, title, description, last_crawled_at,
+                    MATCH(title, description, content_text) AGAINST (:query IN NATURAL LANGUAGE MODE) AS score
+             FROM indexed_pages
+             WHERE status = :status
+               AND MATCH(title, description, content_text) AGAINST (:query_against IN NATURAL LANGUAGE MODE)
+             ORDER BY score DESC, COALESCE(last_crawled_at, updated_at, created_at) DESC
+             LIMIT :limit'
         );
+        $statement->bindValue(':query', $query);
+        $statement->bindValue(':query_against', $query);
+        $statement->bindValue(':status', 'indexed');
+        $statement->bindValue(':limit', self::RESULT_LIMIT, PDO::PARAM_INT);
+        $statement->execute();
 
-        $ipAddress = null;
-        if ($request !== null) {
-            $ipAddress = @inet_pton($request->ip()) ?: null;
-        }
-
-        $statement->execute([
-            'user_id' => Auth::id(),
-            'query_hash' => hash('sha256', mb_strtolower($query)),
-            'results_count' => $resultsCount,
-            'ip_address' => $ipAddress,
-        ]);
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    private function isBlockedHost(string $host): bool
+    private function runLikeFallbackSearch(string $query): array
     {
-        if ($host === 'localhost') {
-            return true;
-        }
+        $statement = Database::connection()->prepare(
+            'SELECT url, domain, title, description, last_crawled_at, 0.0 AS score
+             FROM indexed_pages
+             WHERE status = :status
+               AND (
+                    title LIKE :q
+                    OR description LIKE :q
+                    OR domain LIKE :q
+                    OR url LIKE :q
+               )
+             ORDER BY COALESCE(last_crawled_at, updated_at, created_at) DESC
+             LIMIT :limit'
+        );
 
-        if (filter_var($host, FILTER_VALIDATE_IP) === false) {
-            return false;
-        }
+        $likeTerm = '%' . $query . '%';
+        $statement->bindValue(':status', 'indexed');
+        $statement->bindValue(':q', $likeTerm);
+        $statement->bindValue(':limit', self::RESULT_LIMIT, PDO::PARAM_INT);
+        $statement->execute();
 
-        if (in_array($host, ['127.0.0.1', '0.0.0.0', '::1'], true)) {
-            return true;
-        }
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 
-        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+    private function logQuery(string $query, int $resultsCount, ?int $userId, ?string $ipAddress): void
+    {
+        $statement = Database::connection()->prepare(
+            'INSERT INTO search_queries (user_id, query_hash, query_text_encrypted, results_count, ip_address)
+             VALUES (:user_id, :query_hash, :query_text_encrypted, :results_count, :ip_address)'
+        );
+
+        $statement->bindValue(':user_id', $userId, $userId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $statement->bindValue(':query_hash', hash('sha256', $query));
+        $statement->bindValue(':query_text_encrypted', null, PDO::PARAM_NULL);
+        $statement->bindValue(':results_count', max(0, $resultsCount), PDO::PARAM_INT);
+        $statement->bindValue(':ip_address', $ipAddress !== null ? mb_substr($ipAddress, 0, 45) : null, $ipAddress === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $statement->execute();
+    }
+
+    private function mapSignals(array $result): array
+    {
+        $relevanceSignal = TernarySignal::POSITIVE;
+        $trustSignal = TernarySignal::NEUTRAL;
+        $safetySignal = TernarySignal::POSITIVE;
+
+        $result['search_relevance'] = $relevanceSignal;
+        $result['trust_score'] = $trustSignal;
+        $result['content_safety'] = $safetySignal;
+        $result['relevance_label'] = TernarySignal::label($relevanceSignal);
+        $result['trust_label'] = TernarySignal::label($trustSignal);
+        $result['safety_label'] = TernarySignal::label($safetySignal);
+
+        return $result;
     }
 }
