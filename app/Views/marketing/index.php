@@ -11,6 +11,7 @@ use Browser\Core\View;
     <?php foreach ($cards as $title => $description): ?>
         <article class="card">
             <h2><?= View::e($title) ?></h2>
+            <?php if ($title === 'Clientes'): ?><p><a class="button" href="/marketing/clients">Abrir Clientes</a></p><?php endif; ?>
             <p><?= View::e($description) ?></p>
         </article>
     <?php endforeach; ?>
