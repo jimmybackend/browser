@@ -13,6 +13,7 @@ use Browser\Controllers\SearchController;
 use Browser\Controllers\MarketingClientController;
 use Browser\Controllers\MarketingCampaignController;
 use Browser\Core\Env;
+use Browser\Core\Response;
 use Browser\Core\Router;
 use Browser\Core\Session;
 
@@ -21,6 +22,20 @@ define('BASE_PATH', dirname(__DIR__));
 require BASE_PATH . '/vendor/autoload.php';
 
 Env::load(BASE_PATH);
+
+if (Session::shouldForceHttps()) {
+    $appUrl = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
+    if ($appUrl !== '' && str_starts_with($appUrl, 'https://')) {
+        $path = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $query = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY);
+        $destination = $appUrl . ($path !== '' ? $path : '/');
+        if ($query !== '') {
+            $destination .= '?' . $query;
+        }
+        Response::redirect($destination);
+    }
+}
+
 Session::start();
 
 $router = new Router();
