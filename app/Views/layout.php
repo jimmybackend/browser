@@ -24,11 +24,16 @@ $user = Auth::user();
         <div class="nav-links" aria-label="Menú principal">
             <a href="/">Inicio</a>
             <a href="/search">Buscar</a>
+            <a href="/about">Acerca</a>
             <a href="/mail">Correo</a>
             <a href="/marketing">Marketing</a>
             <?php if ($user): ?>
+                <span class="session-pill">Sesión iniciada como: <?= View::e($user['display_name'] ?? $user['username'] ?? 'usuario') ?> <small>(<?= View::e($user['email'] ?? ($user['username'] ?? '-')) ?>)</small></span>
                 <a href="/dashboard">Dashboard</a>
                 <a href="/profile">Perfil</a>
+                <?php if (!empty($user['id']) && \Browser\Models\UserRole::userHasRole((int) $user['id'], 'admin')): ?>
+                    <a href="/admin">Admin</a>
+                <?php endif; ?>
                 <form method="post" action="/logout" class="logout-form" style="display:inline">
                     <?= Csrf::field() ?>
                     <button class="button secondary" type="submit">Salir</button>

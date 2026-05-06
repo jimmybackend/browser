@@ -15,26 +15,25 @@ final class SearchController extends Controller
 {
     public function index(Request $request): void
     {
+        $query = trim((string) $request->input('q', ''));
+        $service = new SearchService();
+
         $this->view('search/index', [
             'title' => 'Buscador',
-            'query' => '',
-            'results' => [],
+            'query' => $query,
+            'results' => $query !== '' ? $service->search($query, null, $request->ip()) : [],
+            'suggestedPages' => $service->suggestedPages(),
         ]);
     }
 
     public function search(Request $request): void
     {
-        if (!Csrf::validate((string)$request->post('_csrf_token'))) {
+        if (!Csrf::validate((string) $request->post('_csrf_token'))) {
             Session::flash('error', 'Token CSRF inválido.');
             Response::redirect('/search');
         }
 
-        $query = trim((string)$request->post('q'));
-
-        $this->view('search/index', [
-            'title' => 'Buscador',
-            'query' => $query,
-            'results' => (new SearchService())->search($query),
-        ]);
+        $query = trim((string) $request->post('q'));
+        Response::redirect('/search?q=' . urlencode($query));
     }
 }
