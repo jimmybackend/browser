@@ -71,3 +71,14 @@
 - [x] Si la sesión persistida está revocada o expirada, cerrar sesión PHP y redirigir a `/login`.
 - [x] Si falla la validación por error de DB, aplicar fail-closed: cerrar sesión, redirigir y registrar error genérico con `error_log`.
 - [x] Agregar pruebas PHPUnit mínimas sin DB real para cubrir el comportamiento esperado del middleware.
+
+## Fase 8: Gestión de sesiones activas por usuario
+
+- [x] Extender `UserSession` con `listForUser`, `revokeForUserById` y `revokeOtherSessions` usando PDO + prepared statements.
+- [x] Crear `SecurityController` con acciones para listar sesiones, revocar sesión específica y cerrar otras sesiones.
+- [x] Crear vista `app/Views/security/sessions.php` con listado seguro (sin exponer `session_token_hash`) y acciones con CSRF.
+- [x] Agregar rutas protegidas para `/security/sessions`, `/security/sessions/revoke` y `/security/sessions/revoke-others`.
+- [x] Agregar acceso desde perfil a la pantalla de seguridad de sesiones.
+- [x] Mantener comportamiento seguro: si se revoca la sesión actual, se cierra sesión y redirige a `/login`.
+- [x] Agregar pruebas PHPUnit mínimas de existencia y validaciones de no exposición directa de hash.
+- [x] Confirmar que no se modifica la estructura de `user_sessions` ni migraciones.

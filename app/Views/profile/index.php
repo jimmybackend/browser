@@ -19,6 +19,12 @@ $preferences = is_array($preferences ?? null) ? $preferences : [];
 </div>
 
 <div class="card" style="margin-top: 20px;">
+    <h2>Seguridad</h2>
+    <p class="muted">Puedes revisar y revocar tus sesiones activas.</p>
+    <a class="button secondary" href="/security/sessions">Gestionar sesiones</a>
+</div>
+
+<div class="card" style="margin-top: 20px;">
     <h2>Preferencias</h2>
     <form method="post" action="/profile" class="stack" style="gap: 12px;">
         <?= Csrf::field() ?>

@@ -10,6 +10,7 @@ use Browser\Controllers\MailController;
 use Browser\Controllers\ProfileController;
 use Browser\Controllers\MarketingController;
 use Browser\Controllers\SearchController;
+use Browser\Controllers\SecurityController;
 use Browser\Controllers\MarketingClientController;
 use Browser\Controllers\MarketingCampaignController;
 use Browser\Core\Env;
@@ -53,6 +54,9 @@ $router->post('/logout', [AuthController::class, 'logout']);
 $router->get('/dashboard', [DashboardController::class, 'index']);
 $router->get('/profile', [ProfileController::class, 'index']);
 $router->post('/profile', [ProfileController::class, 'update']);
+$router->get('/security/sessions', [SecurityController::class, 'sessions']);
+$router->post('/security/sessions/revoke', [SecurityController::class, 'revokeSession']);
+$router->post('/security/sessions/revoke-others', [SecurityController::class, 'revokeOtherSessions']);
 
 $router->get('/mail', [MailController::class, 'index']);
 $router->get('/search', [SearchController::class, 'index']);
