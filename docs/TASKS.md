@@ -50,3 +50,15 @@
 - [ ] Agregar PHPStan si aplica.
 - [x] Workflow de GitHub Actions presente y alineado a script de validación.
 - [ ] Documentar pruebas manuales por módulo.
+
+
+## Fase 6: Persistencia de sesiones autenticadas
+
+- [x] Crear modelo `app/Models/UserSession.php` para persistir sesiones en la tabla real `user_sessions`.
+- [x] Registrar sesión persistida al hacer login, usando `session_token_hash = hash('sha256', session_id())`.
+- [x] Registrar sesión persistida después de register + autenticación.
+- [x] Revocar sesión persistida en logout antes de destruir la sesión PHP.
+- [x] Guardar `ip_address` en binario con `inet_pton()` cuando la IP sea válida.
+- [x] Limitar `user_agent` a 500 caracteres.
+- [x] Definir `expires_at` con expiración razonable por defecto (+2 horas).
+- [x] Agregar pruebas PHPUnit mínimas sin dependencia de MySQL real para `UserSession`.

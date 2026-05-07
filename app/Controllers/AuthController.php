@@ -11,6 +11,7 @@ use Browser\Core\Request;
 use Browser\Core\Response;
 use Browser\Core\Session;
 use Browser\Core\Validator;
+use Browser\Models\UserSession;
 use Browser\Services\AuthService;
 
 final class AuthController extends Controller
@@ -49,6 +50,7 @@ final class AuthController extends Controller
         try {
             $userId = (new AuthService())->register($username, $email, $password, $displayName ?: null);
             Auth::login($userId);
+            UserSession::create($userId, session_id(), $request->ip(), $request->userAgent());
             Session::flash('success', 'Cuenta creada correctamente.');
             Response::redirect('/dashboard');
         } catch (\RuntimeException $exception) {
@@ -87,6 +89,7 @@ final class AuthController extends Controller
         }
 
         Auth::login((int)$user['id']);
+        UserSession::create((int)$user['id'], session_id(), $request->ip(), $request->userAgent());
         Response::redirect('/dashboard');
     }
 
@@ -98,6 +101,7 @@ final class AuthController extends Controller
             Response::redirect('/dashboard');
         }
 
+        UserSession::revokeBySessionId(session_id());
         Auth::logout();
         Response::redirect('/');
     }
