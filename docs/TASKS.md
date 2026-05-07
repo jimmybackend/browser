@@ -158,3 +158,15 @@
 - [x] Ajustar permisos de `storage` solo si hay permisos.
 - [x] Recargar `php8.5-fpm` y `nginx` solo con permisos suficientes; si no, mostrar comandos manuales.
 - [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.
+
+## Fase 16: Runbook operativo diario y plan de automatización gradual con Codex
+
+- [x] Crear `docs/OPERATIONS_RUNBOOK.md` con checklist diario operativo en VM.
+- [x] Documentar checklist post-merge con `scripts/deploy-update.sh` y chequeos de estado.
+- [x] Documentar respuesta a incidentes de crawler y fallos de deploy-update.
+- [x] Definir comandos prohibidos en producción sin revisión humana.
+- [x] Crear `docs/CODEX_AUTOMATION_PLAN.md` con fases 0 a 5.
+- [x] Dejar explícito estado actual entre Fase 3 y Fase 4.
+- [x] Definir condiciones de avance a Fase 4 y Fase 5.
+- [x] Mantener explícito: sin auto-merge, sin despliegue autónomo de Codex en producción.
+- [x] Confirmar que esta fase es solo documental (sin cambios funcionales, migraciones, `.env` ni Nginx).
