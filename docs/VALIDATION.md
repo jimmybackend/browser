@@ -144,3 +144,22 @@ Pruebas automáticas agregadas (sin DB real):
 
 - `tests/AuthMiddlewareTest.php` verifica que el middleware invoque `UserSession::isActive($sessionId)`.
 - `tests/AuthMiddlewareTest.php` verifica que, para sesión inválida, se cierre sesión y se redirija a `/login`.
+
+## Validación específica de gestión de sesiones activas
+
+Cambios cubiertos en esta iteración:
+
+- Se añadieron métodos de gestión en `app/Models/UserSession.php` para listar sesiones por usuario, revocar por id de registro y revocar otras sesiones, siempre con consultas preparadas.
+- Se creó `app/Controllers/SecurityController.php` con endpoints autenticados para:
+  - listar sesiones (`GET /security/sessions`),
+  - revocar una sesión (`POST /security/sessions/revoke`),
+  - revocar todas las demás (`POST /security/sessions/revoke-others`).
+- Si el usuario revoca su sesión actual, se ejecuta logout y redirección a `/login`.
+- La vista `app/Views/security/sessions.php` no imprime `session_token_hash` y muestra estado, metadata y acciones con CSRF.
+- No se realizaron cambios de esquema ni migraciones de `user_sessions`.
+
+Pruebas automáticas agregadas (sin DB real):
+
+- `tests/SecuritySessionsFeatureTest.php` valida existencia de controlador/vista.
+- `tests/SecuritySessionsFeatureTest.php` valida presencia de los métodos nuevos en `UserSession`.
+- `tests/SecuritySessionsFeatureTest.php` valida que la vista no contenga renderizado directo de `session_token_hash`.

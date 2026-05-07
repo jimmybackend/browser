@@ -25,6 +25,55 @@ final class UserSession
         ]);
     }
 
+    public static function listForUser(int $userId): array
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT id, user_agent, ip_address, created_at, expires_at, revoked_at, session_token_hash AS session_fingerprint
+             FROM user_sessions
+             WHERE user_id = :user_id
+             ORDER BY created_at DESC'
+        );
+
+        $statement->execute(['user_id' => $userId]);
+
+        /** @var array<int, array<string, mixed>> $rows */
+        $rows = $statement->fetchAll();
+
+        return $rows;
+    }
+
+    public static function revokeForUserById(int $userId, int $sessionRecordId): void
+    {
+        $statement = Database::connection()->prepare(
+            'UPDATE user_sessions
+             SET revoked_at = NOW()
+             WHERE user_id = :user_id
+               AND id = :id
+               AND revoked_at IS NULL'
+        );
+
+        $statement->execute([
+            'user_id' => $userId,
+            'id' => $sessionRecordId,
+        ]);
+    }
+
+    public static function revokeOtherSessions(int $userId, string $currentSessionId): void
+    {
+        $statement = Database::connection()->prepare(
+            'UPDATE user_sessions
+             SET revoked_at = NOW()
+             WHERE user_id = :user_id
+               AND session_token_hash <> :current_session_token_hash
+               AND revoked_at IS NULL'
+        );
+
+        $statement->execute([
+            'user_id' => $userId,
+            'current_session_token_hash' => self::hashSessionId($currentSessionId),
+        ]);
+    }
+
     public static function revokeBySessionId(string $sessionId): void
     {
         $statement = Database::connection()->prepare(
