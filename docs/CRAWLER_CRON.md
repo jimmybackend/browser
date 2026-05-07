@@ -127,3 +127,17 @@ Si se usa `www-data`, `storage/` y `storage/logs/` deben ser escribibles por `ww
 - Este documento **no** modifica `.env` ni credenciales.
 - Este documento **no** modifica Nginx.
 - Producción y cambios de base de datos permanecen con aprobación humana.
+
+## Siembra manual de jobs (sin ejecutar crawler)
+
+Los comandos de siembra crean registros en `crawl_jobs` con estado `queued`. **No** ejecutan `crawl:run`.
+
+```bash
+php bin/browser crawl:queue --url=https://example.com --max-depth=1 --max-pages=10
+php bin/browser crawl:queue-file --file=storage/crawler-seeds.txt --max-depth=1 --max-pages=10 --limit=20
+```
+
+Flujo recomendado:
+
+1. Sembrar jobs con `crawl:queue` o `crawl:queue-file`.
+2. Dejar que el cron (cada 5 minutos) procese la cola con `crawl:run --limit=1`.

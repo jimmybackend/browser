@@ -416,3 +416,29 @@ Valida que el comando liste:
 - últimos 20 `crawl_urls` con `status=failed`;
 - últimos 10 `crawl_jobs` con `status=failed`;
 - resumen agrupado por tipo aproximado de error.
+
+## Validación específica: comandos de siembra del crawler
+
+Validación manual recomendada:
+
+```bash
+php bin/browser help
+php bin/browser crawl:queue --url=https://example.com --max-depth=1 --max-pages=2
+php bin/browser crawl:status
+cat >/tmp/crawler-seeds-test.txt <<'SEEDS'
+# comentario
+https://example.com
+
+https://iana.org
+nota-invalida
+http://localhost/test
+SEEDS
+php bin/browser crawl:queue-file --file=/tmp/crawler-seeds-test.txt --max-depth=1 --max-pages=2 --limit=3
+```
+
+Criterios:
+
+- `crawl:queue` y `crawl:queue-file` aparecen en `help`.
+- Se crean jobs en estado `queued` vía `CrawlJob::create()`.
+- URLs inválidas se omiten con `[SKIP] URL inválida.`.
+- No se ejecuta `crawl:run` desde comandos de siembra.

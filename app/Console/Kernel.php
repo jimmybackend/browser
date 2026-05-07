@@ -34,6 +34,8 @@ final class Kernel
             'migrate' => $this->migrate(),
             'seed' => $this->seed(),
             'crawl:add' => $this->crawlAdd(),
+            'crawl:queue' => $this->crawlQueue($argv),
+            'crawl:queue-file' => $this->crawlQueueFile($argv),
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
@@ -57,6 +59,8 @@ final class Kernel
         $this->line('  auth:doctor   Diagnóstico seguro de autenticación/sesión');
         $this->line('  admin:create  Crea o promueve usuario admin');
         $this->line('  crawl:add     Crea un crawl job en estado queued');
+        $this->line('  crawl:queue   Crea un crawl job queued (no interactivo)');
+        $this->line('  crawl:queue-file Crea crawl jobs queued leyendo URLs de archivo');
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
@@ -288,6 +292,117 @@ final class Kernel
             }
         }
 
+        return 0;
+    }
+
+    private function crawlQueue(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $urlInput = $this->readOptionValue($argv, 'url');
+        if ($urlInput === null || trim($urlInput) === '') {
+            $this->line('[FAIL] --url es requerido.');
+            return 1;
+        }
+
+        $maxDepth = $this->parseIntOption($argv, 'max-depth', 1, 0, 5);
+        if ($maxDepth === null) {
+            $this->line('[FAIL] --max-depth debe ser entero entre 0 y 5.');
+            return 1;
+        }
+
+        $maxPages = $this->parseIntOption($argv, 'max-pages', 10, 1, 100);
+        if ($maxPages === null) {
+            $this->line('[FAIL] --max-pages debe ser entero entre 1 y 100.');
+            return 1;
+        }
+
+        $url = $this->normalizeSafeSeedUrl($urlInput);
+        if ($url === null) {
+            $this->line('[FAIL] URL inválida o bloqueada.');
+            return 1;
+        }
+
+        try {
+            $jobId = CrawlJob::create($url, $maxDepth, $maxPages);
+            $this->line("[OK] Job creado con ID {$jobId} para URL {$url}");
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo crear el job.');
+            return 1;
+        }
+    }
+
+    private function crawlQueueFile(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $fileInput = $this->readOptionValue($argv, 'file');
+        if ($fileInput === null || trim($fileInput) === '') {
+            $this->line('[FAIL] --file es requerido.');
+            return 1;
+        }
+
+        $filePath = realpath(BASE_PATH . '/' . ltrim($fileInput, '/')) ?: $fileInput;
+        if (!is_file($filePath) || !is_readable($filePath)) {
+            $this->line('[FAIL] Archivo no encontrado o sin permisos de lectura.');
+            return 1;
+        }
+
+        $maxDepth = $this->parseIntOption($argv, 'max-depth', 1, 0, 5);
+        if ($maxDepth === null) {
+            $this->line('[FAIL] --max-depth debe ser entero entre 0 y 5.');
+            return 1;
+        }
+
+        $maxPages = $this->parseIntOption($argv, 'max-pages', 10, 1, 100);
+        if ($maxPages === null) {
+            $this->line('[FAIL] --max-pages debe ser entero entre 1 y 100.');
+            return 1;
+        }
+
+        $limit = $this->parseIntOption($argv, 'limit', 20, 1, 1000);
+        if ($limit === null) {
+            $this->line('[FAIL] --limit debe ser entero entre 1 y 1000.');
+            return 1;
+        }
+
+        $lines = file($filePath, FILE_IGNORE_NEW_LINES);
+        if ($lines === false) {
+            $this->line('[FAIL] No se pudo leer el archivo.');
+            return 1;
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($lines as $line) {
+            $candidate = trim((string) $line);
+            if ($candidate === '' || str_starts_with($candidate, '#')) {
+                continue;
+            }
+
+            if ($created >= $limit) {
+                break;
+            }
+
+            $url = $this->normalizeSafeSeedUrl($candidate);
+            if ($url === null) {
+                $skipped++;
+                $this->line('[SKIP] URL inválida.');
+                continue;
+            }
+
+            try {
+                CrawlJob::create($url, $maxDepth, $maxPages);
+                $created++;
+            } catch (Throwable $exception) {
+                $skipped++;
+                $this->line('[SKIP] URL inválida.');
+            }
+        }
+
+        $this->line("[OK] Resumen: jobs creados={$created}, URLs omitidas={$skipped}, archivo leído={$filePath}");
         return 0;
     }
 
@@ -813,6 +928,32 @@ final class Kernel
         }
 
         return $normalized;
+    }
+
+    private function readOptionValue(array $argv, string $name): ?string
+    {
+        $prefix = '--' . $name . '=';
+        foreach (array_slice($argv, 2) as $arg) {
+            if (str_starts_with($arg, $prefix)) {
+                return substr($arg, strlen($prefix));
+            }
+        }
+
+        return null;
+    }
+
+    private function parseIntOption(array $argv, string $name, int $default, int $min, int $max): ?int
+    {
+        $rawValue = $this->readOptionValue($argv, $name);
+        if ($rawValue === null || $rawValue === '') {
+            return $default;
+        }
+
+        if (!$this->isIntegerInRange($rawValue, $min, $max, false)) {
+            return null;
+        }
+
+        return (int) $rawValue;
     }
 
     private function line(string $message): void
