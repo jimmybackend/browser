@@ -179,7 +179,7 @@ final class CrawlerService
             'url_hash' => hash('sha256', $url),
             'url' => $url,
             'domain' => strtolower((string) ($parts['host'] ?? '')),
-            'title' => $title !== '' ? mb_substr($title, 0, 255) : null,
+            'title' => $title !== null && $title !== '' ? mb_substr($title, 0, 255) : null,
             'description' => $description !== null ? mb_substr($description, 0, 2000) : null,
             'content_text' => $text,
             'language' => $lang !== null ? mb_substr($lang, 0, 10) : null,
