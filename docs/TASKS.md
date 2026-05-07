@@ -34,11 +34,11 @@
 
 ## Fase 2: Instalación
 
-- [x] Crear o actualizar README con pasos 100% verificables.
+- [ ] Crear o actualizar README con pasos 100% verificables.
 - [x] Existe `.env.example`.
-- [x] Documentar variables de entorno obligatorias/opcionales y valores por entorno.
-- [x] Documentar instalación local (Docker y sin Docker) con pasos de verificación.
-- [x] Documentar comandos de validación y posibles fallos de red.
+- [ ] Documentar variables de entorno obligatorias/opcionales y valores por entorno.
+- [ ] Documentar instalación local (Docker y sin Docker) con pasos de verificación.
+- [ ] Documentar comandos de validación y posibles fallos de red.
 - [ ] Verificar conexión a base de datos en ejecución real de app.
 
 ## Fase 3: Funcionalidad base
@@ -70,7 +70,7 @@
 - [ ] Agregar pruebas mínimas funcionales si el proyecto tiene estructura para pruebas.
 - [ ] Agregar PHPStan si aplica.
 - [x] Existe PHPUnit configurado en composer, pero pendiente ejecutar en entorno con dependencias instaladas.
-- [x] Agregar workflow de GitHub Actions.
+- [ ] Agregar workflow de GitHub Actions.
 - [ ] Documentar pruebas manuales por módulo.
 
 ## Fase 6: Finalización
