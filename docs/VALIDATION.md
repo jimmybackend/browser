@@ -339,3 +339,40 @@ Para cambios solo-documentación como esta iteración:
    - sin cambios en migraciones o estructura de BD,
    - sin cambios en `.env`/credenciales,
    - sin cambios en Nginx.
+
+## Validación manual pre-deploy en GitHub Actions
+
+Workflow: `.github/workflows/manual-predeploy-validation.yml`
+
+### Cómo ejecutarlo
+
+1. GitHub -> **Actions**.
+2. Seleccionar **Manual pre-deploy validation**.
+3. Click en **Run workflow**.
+4. Completar inputs:
+   - `reason`: razón corta de la validación manual.
+   - `target_ref`: rama/ref a validar (default: `main`).
+
+### Qué valida
+
+- `composer validate --no-check-publish`
+- `composer install --no-interaction --prefer-dist --no-progress`
+- `bash scripts/validate.sh`
+- Sintaxis shell:
+  - `bash -n scripts/deploy-check.sh`
+  - `bash -n scripts/deploy-after-pull.sh`
+  - `bash -n scripts/deploy-update.sh`
+  - `bash -n scripts/crawler-cron-check.sh`
+- Smoke CLI:
+  - `php bin/browser help`
+
+### Límites explícitos
+
+Este workflow:
+
+- No hace deploy.
+- No se conecta a la VM.
+- No usa secretos.
+- No modifica `.env`.
+- No ejecuta migraciones sobre producción.
+- No modifica estructura de base de datos.

@@ -170,3 +170,13 @@
 - [x] Definir condiciones de avance a Fase 4 y Fase 5.
 - [x] Mantener explícito: sin auto-merge, sin despliegue autónomo de Codex en producción.
 - [x] Confirmar que esta fase es solo documental (sin cambios funcionales, migraciones, `.env` ni Nginx).
+
+## Fase 17: Workflow manual de validación pre-deploy
+
+- [x] Crear `.github/workflows/manual-predeploy-validation.yml` con trigger `workflow_dispatch`.
+- [x] Agregar inputs `reason` y `target_ref` (default `main`).
+- [x] Configurar job en `ubuntu-latest` con checkout del ref indicado.
+- [x] Configurar PHP 8.3 e instalar extensiones requeridas (`pdo_mysql`, `mbstring`, `curl`, `zip`, `intl`, `gd`, `bcmath`, `soap`).
+- [x] Ejecutar validaciones: `composer validate`, `composer install`, `bash scripts/validate.sh`, `bash -n` de scripts operativos y `php bin/browser help`.
+- [x] Mantener límites: sin deploy, sin conexión a VM, sin uso de secretos, sin cambios de BD ni `.env`.
+- [x] Actualizar documentación operativa y plan de automatización para aclarar que Jimmy mantiene merge y deploy manual.
