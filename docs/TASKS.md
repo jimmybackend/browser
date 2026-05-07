@@ -15,7 +15,7 @@
 
 ### Hallazgos técnicos (diagnóstico real)
 
-- [x] Script `scripts/validate.sh` actualizado y ejecutado con fallback seguro para PHPUnit con configuración explícita.
+- [x] Script `scripts/validate.sh` endurecido: en CI no permite omitir PHPUnit cuando existe `composer.json` (requiere `composer install`, `vendor/bin/phpunit` y `phpunit.xml.dist`).
 - [x] Lint PHP completo pasa sin errores de sintaxis.
 - [x] `composer validate` pasa.
 - [x] Existe workflow de GitHub Actions para validación (`push`, `pull_request`, `workflow_dispatch`) con PHP 8.3 y `bash scripts/validate.sh`.
@@ -44,7 +44,7 @@
 ## Fase 5: Pruebas y validación
 
 - [x] Existe validación de sintaxis PHP (`scripts/validate.sh`).
-- [x] Ajustar ejecución de PHPUnit para no correr nunca sin configuración explícita o ruta de tests.
+- [x] Ajustar ejecución de PHPUnit en CI para fallar si no existe `vendor/bin/phpunit` o `phpunit.xml.dist` tras `composer install`.
 - [x] Agregar pruebas baseline de estructura (sin DB) en `tests/BootstrapTest.php`.
 - [ ] Agregar pruebas funcionales mínimas si el proyecto tiene estructura para pruebas.
 - [ ] Agregar PHPStan si aplica.

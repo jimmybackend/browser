@@ -11,12 +11,12 @@ bash scripts/validate.sh
 El script valida, en este orden:
 
 1. Sintaxis PHP (`php -l` en archivos del repo, excluyendo `vendor`/`node_modules`).
-2. Composer (`composer validate` + `composer install`).
-3. PHPUnit (si existe `vendor/bin/phpunit`) con fallback seguro:
-   - `vendor/bin/phpunit --configuration phpunit.xml.dist` si existe `phpunit.xml.dist`.
-   - `vendor/bin/phpunit --configuration phpunit.xml` si existe `phpunit.xml`.
-   - `vendor/bin/phpunit tests` si no hay config pero sí existe `tests/`.
-   - Nunca ejecuta `vendor/bin/phpunit` sin configuración/parámetro explícito.
+2. Composer (si existe `composer.json`): requiere Composer, ejecuta `composer validate` y `composer install`; si falla cualquier paso, termina con error.
+3. PHPUnit en modo estricto de CI (si existe `composer.json`):
+   - exige `vendor/bin/phpunit` después de `composer install`;
+   - exige `phpunit.xml.dist`;
+   - ejecuta `vendor/bin/phpunit --configuration phpunit.xml.dist`;
+   - si algo falta, falla con exit code != 0 (sin skips silenciosos).
 4. PHPStan (`vendor/bin/phpstan analyse`) solo si está instalado.
 5. Escaneo básico de nombres de archivos sensibles (`.env`, `*.pem`, `*.key`, etc.).
 
@@ -112,8 +112,8 @@ Si `composer install` no se ejecuta correctamente, no se crea `vendor/bin/phpuni
 
 En ese caso:
 
-- El script reporta estas validaciones como omitidas (skip).
-- Debe documentarse explícitamente en el PR como limitación del entorno.
+- `composer install` falla y el script termina con error.
+- Si el bloqueo es de red/proxy, debe documentarse explícitamente en el PR.
 - No debe afirmarse que pruebas/unit/static analysis pasaron si no se ejecutaron.
 
 
