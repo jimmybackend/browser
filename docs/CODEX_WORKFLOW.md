@@ -68,3 +68,10 @@ Si aparece error de Packagist (por ejemplo `curl error 56` o `CONNECT tunnel fai
 
 - `docs/DEPLOYMENT_VM.md`
 - `docs/BRANCH_PROTECTION.md`
+
+## Operación diaria y automatización gradual
+
+- Operación diaria en VM: seguir `docs/OPERATIONS_RUNBOOK.md`.
+- Plan de automatización por fases: seguir `docs/CODEX_AUTOMATION_PLAN.md`.
+- Estado actual del proyecto: entre Fase 3 y Fase 4, con deploy manual post-merge.
+- Mantener merge humano obligatorio y aprobación humana para producción/BD.

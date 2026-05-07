@@ -315,3 +315,27 @@ Si `composer install` falla por Packagist/proxy (por ejemplo `curl error 56`, `C
 - error exacto,
 - causa probable,
 - alternativa usada para validar.
+
+## Validación documental (runbook y automatización)
+
+Para cambios solo-documentación como esta iteración:
+
+1. Revisar enlaces internos a documentación existente:
+   - `docs/CODEX_WORKFLOW.md`
+   - `docs/BRANCH_PROTECTION.md`
+   - `docs/DEPLOYMENT_VM.md`
+   - `docs/CRAWLER_CRON.md`
+2. Ejecutar validación general cuando el entorno lo permita:
+   ```bash
+   bash scripts/validate.sh
+   ```
+3. Si falla por Packagist/proxy, documentar explícitamente en PR:
+   - comando ejecutado,
+   - error exacto,
+   - causa probable,
+   - mitigación o siguiente paso.
+4. Confirmar alcance:
+   - sin cambios funcionales,
+   - sin cambios en migraciones o estructura de BD,
+   - sin cambios en `.env`/credenciales,
+   - sin cambios en Nginx.
