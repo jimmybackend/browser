@@ -174,3 +174,43 @@ Acción segura:
 - No modificar Nginx desde este repositorio.
 - No usar `git reset --hard` ni `git clean -fdx` sin revisión humana.
 - No automatizar despliegue a producción sin aprobación humana.
+
+---
+
+## Actualización manual segura post-merge (`deploy-update.sh`)
+
+Se agrega `scripts/deploy-update.sh` como flujo manual único para actualizar la VM después de merges aprobados.
+
+Uso:
+
+```bash
+cd /var/www/browser
+bash scripts/deploy-update.sh
+```
+
+Qué hace (en orden y de forma conservadora):
+
+1. Se posiciona en `/var/www/browser` si existe.
+2. Falla si no está en un repositorio Git válido.
+3. Muestra usuario actual, rama actual y último commit.
+4. Hace backup de `.env` (si existe) sin mostrar su contenido.
+5. Intenta backup de `/etc/nginx/sites-available/browser` solo si hay permisos.
+6. Ejecuta:
+   - `git fetch origin`
+   - `git pull --ff-only origin main`
+   - `composer install --no-interaction --prefer-dist --no-progress`
+   - `php bin/browser migrate`
+   - `php bin/browser doctor`
+   - `php bin/browser auth:doctor`
+   - `php bin/browser index:status`
+   - `bash scripts/crawler-cron-check.sh`
+7. Asegura directorios `storage/logs`, `storage/cache`, `storage/sessions`.
+8. Ajusta permisos de `storage` solo si el usuario puede hacerlo.
+9. Intenta recargar `php8.5-fpm` y `nginx` solo con permisos suficientes.
+10. Si no puede recargar servicios, muestra advertencia y comandos manuales.
+
+Notas de seguridad:
+
+- No usa comandos destructivos (`git reset --hard`, `git clean -fdx`).
+- No modifica Nginx ni `.env`; solo genera backup cuando puede.
+- Mantiene aprobación humana para producción y base de datos.

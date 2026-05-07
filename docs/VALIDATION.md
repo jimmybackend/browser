@@ -287,3 +287,31 @@ Si `scripts/validate.sh` falla por conectividad a Packagist/proxy (ej. `curl err
 - error exacto,
 - causa probable (red/proxy/firewall),
 - alternativa usada en la validación local.
+
+## Validación específica: actualización manual segura de VM (`deploy-update.sh`)
+
+Cambios cubiertos en esta iteración:
+
+- Se agregó `scripts/deploy-update.sh` para actualizar la VM manualmente después de merges.
+- El script falla si no está en un repositorio Git válido.
+- Muestra usuario/rama/último commit y respalda `.env` sin exponer contenido.
+- Intenta backup de `/etc/nginx/sites-available/browser` solo con permisos suficientes.
+- Ejecuta secuencia conservadora: `git fetch`, `git pull --ff-only`, `composer install`, `migrate`, `doctor`, `auth:doctor`, `index:status` y `crawler-cron-check`.
+- Asegura directorios de `storage` y ajusta permisos solo si se puede.
+- Intenta recargar `php8.5-fpm` y `nginx` solo cuando hay permisos; si no, muestra comandos manuales.
+- No usa `git reset --hard` ni `git clean -fdx`.
+
+Comandos recomendados:
+
+```bash
+bash -n scripts/deploy-update.sh
+bash scripts/deploy-update.sh
+bash scripts/validate.sh
+```
+
+Si `composer install` falla por Packagist/proxy (por ejemplo `curl error 56`, `CONNECT tunnel failed, response 403`), documentar explícitamente en el PR:
+
+- comando ejecutado,
+- error exacto,
+- causa probable,
+- alternativa usada para validar.
