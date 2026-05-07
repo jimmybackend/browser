@@ -126,3 +126,12 @@
 - [x] Confirmar en documentación que producción y base de datos siguen bajo aprobación humana.
 - [x] Agregar checklist previo y posterior a activación de branch protection.
 - [x] Confirmar que esta fase no introduce cambios funcionales de código, migraciones ni credenciales.
+
+## Fase 13: Plantillas de Issues/PR para flujo seguro con Codex
+
+- [x] Crear `.github/pull_request_template.md` con checklist de seguridad, alcance, pruebas, riesgos y validación manual.
+- [x] Crear plantillas de issues en `.github/ISSUE_TEMPLATE/` para bug, feature, tarea Codex y tarea sensible de base de datos.
+- [x] Asegurar en plantillas confirmaciones explícitas: sin auto-merge, sin reutilizar ramas y sin actualizar PRs viejos.
+- [x] Crear `docs/CODEX_WORKFLOW.md` con el flujo `1 tarea = 1 chat nuevo = 1 PR = 1 merge manual`.
+- [x] Referenciar aprobación humana obligatoria para producción y base de datos.
+- [x] Confirmar que esta fase no modifica código funcional, migraciones, `.env` ni configuración Nginx.

@@ -1,0 +1,86 @@
+name: Database sensitive task
+description: Tarea con impacto potencial en BD; requiere mayor control humano.
+title: "[DB SENSITIVE] "
+labels:
+  - database
+  - requires-human-review
+body:
+  - type: input
+    id: task_title
+    attributes:
+      label: Título de tarea
+    validations:
+      required: true
+
+  - type: textarea
+    id: real_tables
+    attributes:
+      label: Tablas reales involucradas
+      description: Enumera únicamente tablas reales verificadas.
+    validations:
+      required: true
+
+  - type: textarea
+    id: real_fields
+    attributes:
+      label: Campos reales involucrados
+      description: Enumera únicamente campos reales verificadas.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reviewed_sql
+    attributes:
+      label: SQL real revisado
+      description: Especifica rutas exactas (`database/migrations/*.sql`) o dump real autorizado.
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "**Prohibido inventar tablas o campos.** Si falta información de esquema real, la tarea debe bloquearse y documentarse."
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: Plan de rollback
+      description: Pasos concretos para revertir cambios de BD.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: requires_migration
+    attributes:
+      label: ¿Requiere migración?
+      options:
+        - "No"
+        - "Sí"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: requires_backup
+    attributes:
+      label: ¿Requiere backup antes de producción?
+      options:
+        - "Sí"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: safe_testing_plan
+    attributes:
+      label: Plan de pruebas sin tocar datos reales (si es posible)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: human_approval
+    attributes:
+      label: Aprobaciones humanas obligatorias
+      options:
+        - label: Confirmo que requiere aprobación humana explícita para ejecución en producción.
+          required: true
+        - label: Confirmo que requiere aprobación humana explícita para cambios de base de datos.
+          required: true
