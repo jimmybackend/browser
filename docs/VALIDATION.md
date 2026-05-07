@@ -376,3 +376,28 @@ Este workflow:
 - No modifica `.env`.
 - No ejecuta migraciones sobre producción.
 - No modifica estructura de base de datos.
+
+## Validación específica: rollback manual seguro (documentación + diagnóstico)
+
+Cambios cubiertos en esta iteración:
+
+- Se agrega `docs/ROLLBACK_VM.md` con procedimiento de rollback manual seguro en VM.
+- Se agrega `scripts/rollback-check.sh` como diagnóstico no destructivo (sin `git reset`, sin `git clean`, sin tocar `.env`, sin modificar archivos).
+- Se actualizan `docs/OPERATIONS_RUNBOOK.md`, `docs/CODEX_AUTOMATION_PLAN.md` y `docs/TASKS.md` para integrar rollback manual como práctica operativa y requisito previo a Fase 5.
+
+Comandos de validación recomendados:
+
+```bash
+bash -n scripts/rollback-check.sh
+bash scripts/rollback-check.sh
+bash scripts/validate.sh
+```
+
+Notas de entorno:
+
+- `bash scripts/rollback-check.sh` y `bash scripts/validate.sh` deben ejecutarse cuando el entorno lo permita.
+- Si hay fallos por red/proxy (Packagist/Composer), documentar en el PR:
+  - comando ejecutado,
+  - error exacto,
+  - causa probable,
+  - alternativa usada para validar.
