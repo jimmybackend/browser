@@ -25,7 +25,7 @@
 
 ### Pendientes críticos detectados
 
-- [ ] Generar y versionar `composer.lock` para builds reproducibles (no generado en este cambio).
+- [ ] Generar y versionar `composer.lock` para builds reproducibles (bloqueado por conectividad a Packagist; `composer update --no-interaction --no-progress` falló el 2026-05-07 con `curl error 56` y `CONNECT tunnel failed, response 403`).
 - [ ] Agregar pruebas funcionales reales más allá de `tests/BootstrapTest.php` (auth, rutas protegidas, marketing).
 - [x] Agregar pruebas base de estructura de proyecto (rutas/archivos críticos y checks de `composer.json` sin dependencia de DB).
 - [ ] Incorporar/anclar PHPStan y configuración (`phpstan.neon`) si será obligatorio.

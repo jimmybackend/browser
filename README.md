@@ -193,7 +193,7 @@ Este repositorio incluye workflow de GitHub Actions en `.github/workflows/ci.yml
 
 ## Composer lockfile (estado actual)
 
-Actualmente no se versiona `composer.lock` porque en este entorno el acceso a Packagist falla por red/proxy (`curl error 56`, `CONNECT tunnel failed, response 403`).
+Actualmente no se versiona `composer.lock` porque en este entorno el acceso a Packagist falla por red/proxy. En la ejecución del **2026-05-07** el comando `composer update --no-interaction --no-progress` devolvió `curl error 56` y `CONNECT tunnel failed, response 403`.
 
 Cuando exista conectividad, generar lockfile con:
 
@@ -202,6 +202,8 @@ composer update
 git add composer.lock
 git commit -m "build: add composer lockfile"
 ```
+
+Luego instalar dependencias con `composer install --no-interaction --prefer-dist --no-progress` para respetar exactamente las versiones fijadas en el lockfile.
 
 ## Seguridad
 
