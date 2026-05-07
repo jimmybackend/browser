@@ -145,3 +145,16 @@
 - [x] Aclarar que no se automatiza producción ni se instala cron automáticamente.
 - [x] Aclarar que la instalación de cron debe ser manual (`crontab -e`) por humano.
 - [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.
+
+## Fase 15: Actualización manual segura de VM post-merge
+
+- [x] Crear `scripts/deploy-update.sh` como flujo manual único post-merge.
+- [x] Mantener ejecución conservadora sin comandos destructivos de Git.
+- [x] Validar repo Git, mostrar usuario/rama/último commit antes de actualizar.
+- [x] Respaldar `.env` sin exponer contenido.
+- [x] Intentar backup de config Nginx solo si hay permisos (sin modificar Nginx).
+- [x] Ejecutar secuencia segura: fetch/pull ff-only, composer install, migrate, doctor, auth:doctor, index:status y chequeo de cron.
+- [x] Asegurar directorios `storage/logs`, `storage/cache`, `storage/sessions`.
+- [x] Ajustar permisos de `storage` solo si hay permisos.
+- [x] Recargar `php8.5-fpm` y `nginx` solo con permisos suficientes; si no, mostrar comandos manuales.
+- [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.
