@@ -22,103 +22,197 @@ Crear una plataforma web segura, escalable y modular que permita:
 - Registrar eventos importantes del sistema.
 - Preparar el proyecto para AWS.
 
-## Empresa objetivo
-
-Browser está pensado para una empresa de marketing que desea tener una plataforma propia para búsqueda, comunicación, clientes, campañas y automatización.
-
-La idea es construir primero una base firme y segura, y después agregar funciones más avanzadas.
-
-## Stack técnico
+## Stack técnico real
 
 - PHP 8.3 o superior
 - MySQL 8 o MariaDB
 - PDO
 - Composer
-- HTML
-- CSS
-- JavaScript
-- Docker
-- Apache o Nginx
-- AWS EC2 en producción
-- AWS S3 para archivos en fases futuras
+- HTML/CSS/JS
+- Docker + Nginx
 
-## Licencia
+## Requisitos previos
 
-Este proyecto usará la licencia Apache 2.0.
+### Con Docker
 
-La licencia Apache 2.0 permite usar, modificar y distribuir el código, incluyendo uso comercial, siempre respetando los términos de la licencia.
+- Docker Engine
+- Docker Compose
 
-## Estructura inicial del proyecto
+### Sin Docker
 
-```txt
-browser/
-├── app/
-│   ├── Controllers/
-│   ├── Core/
-│   ├── Middleware/
-│   ├── Models/
-│   ├── Services/
-│   └── Views/
-├── config/
-├── database/
-│   ├── migrations/
-│   └── seeders/
-├── public/
-│   └── assets/
-├── storage/
-│   ├── logs/
-│   ├── mail/
-│   └── uploads/
-├── tests/
-├── docker/
-├── .env.example
-├── .gitignore
-├── composer.json
-├── docker-compose.yml
-├── LICENSE
-└── README.md
+- PHP 8.3+
+- Extensiones PHP: `mbstring`, `intl`, `pdo`, `pdo_mysql`
+- Composer 2
+- MySQL 8+ o MariaDB
 
-## Protocolo ternario interno para IA
+## Variables de entorno
 
-Browser incorpora un protocolo ternario para representar decisiones internas con valores numéricos estables en lugar de texto libre.
+El proyecto usa `.env` local cargado por `vlucas/phpdotenv`.
 
-### ¿Qué es?
-Es una convención de señales con tres estados fijos:
-
-- `+1` = aceptar / positivo / relevante
-- `0` = pendiente / neutral / desconocido
-- `-1` = rechazar / negativo / riesgoso
-
-### ¿Por qué usar +1, 0 y -1?
-- Reduce ambigüedad semántica entre módulos y entre humano/IA.
-- Simplifica validaciones, filtros y reglas de negocio.
-- Evita depender de comparaciones de texto como "aprobado", "rechazado" o "pendiente".
-
-### ¿Cómo ayuda al buscador manejado por IA?
-Permite que el buscador evalúe resultados usando señales internas consistentes (por ejemplo relevancia, confianza y seguridad) y no etiquetas textuales variables.
-
-### ¿Cómo evita comparar textos humanos?
-La lógica interna compara enteros (`-1`, `0`, `1`). Las etiquetas humanas son solo una capa de visualización para UI o reportes.
-
-### Uso previsto por área
-- **Búsqueda**: relevancia, coincidencia de intención, confianza de fuente.
-- **Seguridad y privacidad**: seguridad de contenido, riesgo de spam, señales de riesgo.
-- **Correo**: riesgo de entrega de email.
-- **Marketing**: calidad de lead y priorización comercial.
-
-Regla base: los textos humanos son etiquetas visibles; la decisión interna siempre se ejecuta con valores numéricos ternarios.
-
-## Instalación en servidor sin Docker
-
-Para una instalación productiva en Ubuntu con Nginx, PHP-FPM y MySQL remoto, sigue la guía:
-
-- [`docs/UBUNTU_NGINX_PHP_INSTALL.md`](docs/UBUNTU_NGINX_PHP_INSTALL.md)
-
-Comandos CLI principales:
+1. Copia el ejemplo:
 
 ```bash
+cp .env.example .env
+```
+
+2. Ajusta al menos estas variables:
+
+- `APP_NAME`
+- `APP_ENV`
+- `APP_DEBUG`
+- `APP_URL`
+- `APP_DESCRIPTION`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_DATABASE`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `CRAWL_AUTO_QUEUE_ENABLED`
+- `CRAWL_AUTO_QUEUE_FOR_GUESTS`
+- `CRAWL_AUTO_QUEUE_MAX_PAGES`
+- `CRAWL_AUTO_QUEUE_MAX_DEPTH`
+
+## Instalación con Docker
+
+1. Copia `.env` desde el ejemplo y ajusta credenciales.
+2. Construye y levanta servicios:
+
+```bash
+docker compose up --build -d
+```
+
+3. Instala dependencias (si no se instalaron automáticamente en `app`):
+
+```bash
+docker compose exec app composer install --no-interaction --prefer-dist --no-progress
+```
+
+4. Ejecuta migraciones:
+
+```bash
+docker compose exec app php bin/browser migrate
+```
+
+5. Ejecuta seeders:
+
+```bash
+docker compose exec app php bin/browser seed
+```
+
+6. Crea o promueve usuario admin inicial:
+
+```bash
+docker compose exec app php bin/browser admin:create
+```
+
+7. Abre la aplicación:
+
+- http://localhost:8080
+
+## Instalación sin Docker
+
+1. Copia `.env` desde el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+2. Instala dependencias PHP:
+
+```bash
+composer install --no-interaction --prefer-dist --no-progress
+```
+
+3. Configura y levanta MySQL/MariaDB con base y usuario equivalentes a `.env`.
+
+4. Ejecuta migraciones:
+
+```bash
+php bin/browser migrate
+```
+
+5. Ejecuta seeders:
+
+```bash
+php bin/browser seed
+```
+
+6. Crea o promueve admin inicial:
+
+```bash
+php bin/browser admin:create
+```
+
+7. Levanta servidor local:
+
+```bash
+composer run serve
+```
+
+8. Abre:
+
+- http://localhost:8080
+
+## Comandos CLI útiles
+
+```bash
+php bin/browser help
 php bin/browser doctor
+php bin/browser auth:doctor
 php bin/browser migrate
 php bin/browser seed
 php bin/browser admin:create
 ```
+
+## Validaciones
+
+Validación recomendada:
+
+```bash
+bash scripts/validate.sh
+```
+
+Validación manual (si aplica):
+
+```bash
+find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
+composer validate --no-check-publish
+composer install --no-interaction --prefer-dist --no-progress
+vendor/bin/phpunit
+vendor/bin/phpstan analyse
+```
+
+## CI
+
+Este repositorio incluye workflow de GitHub Actions en `.github/workflows/ci.yml`.
+
+- Ejecuta en `push`, `pull_request` y `workflow_dispatch`.
+- Usa PHP 8.3 con extensiones `mbstring`, `intl`, `pdo`, `pdo_mysql`.
+- Ejecuta `bash scripts/validate.sh`.
+
+## Composer lockfile (estado actual)
+
+Actualmente no se versiona `composer.lock` porque en este entorno el acceso a Packagist falla por red/proxy (`curl error 56`, `CONNECT tunnel failed, response 403`).
+
+Cuando exista conectividad, generar lockfile con:
+
+```bash
+composer update
+git add composer.lock
+git commit -m "build: add composer lockfile"
+```
+
+## Seguridad
+
+- No subir `.env` real, llaves privadas ni credenciales.
+- Revisar `docs/SECURITY_CHECKLIST.md` antes de cerrar tareas sensibles.
+
+## Instalación en Ubuntu + Nginx (referencia)
+
+Para una instalación productiva en Ubuntu con Nginx, PHP-FPM y MySQL remoto:
+
+- [`docs/UBUNTU_NGINX_PHP_INSTALL.md`](docs/UBUNTU_NGINX_PHP_INSTALL.md)
+
+## Licencia
+
+Apache 2.0.
