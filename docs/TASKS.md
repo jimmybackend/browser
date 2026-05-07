@@ -180,3 +180,15 @@
 - [x] Ejecutar validaciones: `composer validate`, `composer install`, `bash scripts/validate.sh`, `bash -n` de scripts operativos y `php bin/browser help`.
 - [x] Mantener límites: sin deploy, sin conexión a VM, sin uso de secretos, sin cambios de BD ni `.env`.
 - [x] Actualizar documentación operativa y plan de automatización para aclarar que Jimmy mantiene merge y deploy manual.
+
+## Fase 18: Rollback manual seguro de VM (documentación + diagnóstico)
+
+- [x] Crear `docs/ROLLBACK_VM.md` con procedimiento seguro de rollback manual.
+- [x] Dejar explícito que rollback requiere aprobación humana para producción y BD.
+- [x] Documentar checklist previo (commit actual, `git status`, backup `.env` sin exponer contenido, logs, DB si aplica, backups existentes).
+- [x] Documentar comandos prohibidos sin revisión (`git reset --hard`, `git clean -fdx`).
+- [x] Documentar ruta preferida: revert PR en GitHub + merge manual + `bash scripts/deploy-update.sh` en VM.
+- [x] Documentar contingencias por fallos de reload de servicios, Composer y migraciones.
+- [x] Agregar script diagnóstico no destructivo `scripts/rollback-check.sh` (sin rollback automático).
+- [x] Actualizar runbook y plan de automatización para incluir rollback como requisito previo de Fase 5.
+- [x] Confirmar que esta fase no modifica código funcional, migraciones, `.env` ni Nginx.

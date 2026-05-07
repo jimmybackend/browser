@@ -96,3 +96,11 @@ Se agrega el workflow `.github/workflows/manual-predeploy-validation.yml` como p
 - Ejecuta validaciones técnicas antes de tocar la VM.
 - **No hace deploy**, **no corre migraciones en producción**, **no usa secretos** y **no se conecta a la VM**.
 - Jimmy mantiene el control: sigue revisando/mergeando PRs manualmente y sigue ejecutando manualmente `bash scripts/deploy-update.sh` en la VM.
+
+## Requisito adicional antes de Fase 5
+
+Antes de habilitar cualquier auto-deploy limitado (Fase 5), es obligatorio que el rollback manual esté:
+
+- documentado paso a paso (`docs/ROLLBACK_VM.md`),
+- validado con diagnóstico no destructivo (`bash scripts/rollback-check.sh`),
+- probado operativamente con evidencia de recuperación segura.

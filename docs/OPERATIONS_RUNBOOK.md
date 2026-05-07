@@ -142,3 +142,16 @@ Si pasa, continuar con despliegue manual en VM:
 cd /var/www/browser
 bash scripts/deploy-update.sh
 ```
+
+## Rollback manual
+
+Ante deploy fallido o incidente post-actualización:
+
+1. Ejecutar diagnóstico no destructivo:
+   ```bash
+   bash scripts/rollback-check.sh
+   ```
+2. Seguir el procedimiento documentado en:
+   - `docs/ROLLBACK_VM.md`
+3. Mantener aprobación humana para rollback en producción y cualquier acción sobre base de datos.
+4. Priorizar revert de PR en GitHub + `bash scripts/deploy-update.sh` en VM como ruta recomendada.
