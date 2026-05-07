@@ -82,3 +82,14 @@
 - [x] Mantener comportamiento seguro: si se revoca la sesión actual, se cierra sesión y redirige a `/login`.
 - [x] Agregar pruebas PHPUnit mínimas de existencia y validaciones de no exposición directa de hash.
 - [x] Confirmar que no se modifica la estructura de `user_sessions` ni migraciones.
+
+## Fase 9: Auditoría de autenticación y sesiones
+
+- [x] Crear modelo `app/Models/AuditLog.php` para insertar eventos en `audit_logs` usando PDO + prepared statements.
+- [x] Registrar `register_success`, `login_success`, `login_failed` y `logout` desde `AuthController`.
+- [x] Registrar `session_revoked` y `other_sessions_revoked` desde `SecurityController`.
+- [x] Registrar `persisted_session_invalid` y `persisted_session_validation_error` desde `AuthMiddleware`.
+- [x] Sanitizar metadata para no persistir `password`, `_csrf_token`, `session_id` ni `session_token_hash`.
+- [x] Mantener resiliencia: errores de auditoría no bloquean login/logout y solo registran `error_log` genérico.
+- [x] Agregar pruebas PHPUnit mínimas sin DB real para `AuditLog`.
+- [x] Confirmar que no se modifica la estructura de `audit_logs` ni migraciones.

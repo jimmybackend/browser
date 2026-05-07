@@ -163,3 +163,21 @@ Pruebas automáticas agregadas (sin DB real):
 - `tests/SecuritySessionsFeatureTest.php` valida existencia de controlador/vista.
 - `tests/SecuritySessionsFeatureTest.php` valida presencia de los métodos nuevos en `UserSession`.
 - `tests/SecuritySessionsFeatureTest.php` valida que la vista no contenga renderizado directo de `session_token_hash`.
+
+## Validación específica de auditoría de autenticación y sesiones
+
+Cambios cubiertos en esta iteración:
+
+- Se creó `app/Models/AuditLog.php` para persistir eventos en la tabla real `audit_logs` con consultas preparadas.
+- `ip_address` se guarda con `inet_pton()` solo cuando la IP es válida; si no, se guarda `NULL`.
+- `user_agent` se limita a 500 caracteres.
+- `metadata` se sanitiza y serializa como JSON válido o `NULL`.
+- No se persisten `password`, `_csrf_token`, `session_id` ni `session_token_hash` en metadata.
+- Se agregaron eventos: `register_success`, `login_success`, `login_failed`, `logout`, `session_revoked`, `other_sessions_revoked`, `persisted_session_invalid`, `persisted_session_validation_error`.
+- Ante fallos de auditoría, el flujo principal continúa y solo se registra `error_log` genérico.
+
+Pruebas automáticas agregadas (sin DB real):
+
+- `tests/AuditLogTest.php` valida existencia de modelo y uso de tabla `audit_logs`.
+- `tests/AuditLogTest.php` valida sanitización de metadata sensible.
+- `tests/AuditLogTest.php` valida codificación JSON/NULL de metadata.

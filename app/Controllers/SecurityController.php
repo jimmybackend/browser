@@ -10,6 +10,7 @@ use Browser\Core\Csrf;
 use Browser\Core\Request;
 use Browser\Core\Response;
 use Browser\Core\Session;
+use Browser\Models\AuditLog;
 use Browser\Models\UserSession;
 
 final class SecurityController extends Controller
@@ -65,6 +66,9 @@ final class SecurityController extends Controller
         }
 
         UserSession::revokeForUserById((int) $user['id'], $sessionRecordId);
+        $this->recordAuditEvent((int) $user['id'], 'session_revoked', 'user_session', (string) $sessionRecordId, [
+            'revoked_current_session' => $isCurrentSession,
+        ], $request->ip(), $request->userAgent());
 
         if ($isCurrentSession) {
             Auth::logout();
@@ -91,8 +95,24 @@ final class SecurityController extends Controller
         }
 
         UserSession::revokeOtherSessions((int) $user['id'], session_id());
+        $this->recordAuditEvent((int) $user['id'], 'other_sessions_revoked', 'user', (string) $user['id'], [], $request->ip(), $request->userAgent());
         Session::flash('success', 'Se cerraron las otras sesiones activas.');
 
         Response::redirect('/security/sessions');
+    }
+    private function recordAuditEvent(
+        ?int $userId,
+        string $action,
+        ?string $entityType = null,
+        ?string $entityId = null,
+        array $metadata = [],
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): void {
+        try {
+            AuditLog::record($userId, $action, $entityType, $entityId, $metadata, $ipAddress, $userAgent);
+        } catch (\Throwable) {
+            error_log('Audit logging failed.');
+        }
     }
 }

@@ -11,6 +11,7 @@ use Browser\Core\Request;
 use Browser\Core\Response;
 use Browser\Core\Session;
 use Browser\Core\Validator;
+use Browser\Models\AuditLog;
 use Browser\Models\UserSession;
 use Browser\Services\AuthService;
 
@@ -51,6 +52,10 @@ final class AuthController extends Controller
             $userId = (new AuthService())->register($username, $email, $password, $displayName ?: null);
             Auth::login($userId);
             UserSession::create($userId, session_id(), $request->ip(), $request->userAgent());
+            $this->recordAuditEvent((int) $userId, 'register_success', 'user', (string) $userId, [
+                'email' => $email,
+                'username' => $username,
+            ], $request->ip(), $request->userAgent());
             Session::flash('success', 'Cuenta creada correctamente.');
             Response::redirect('/dashboard');
         } catch (\RuntimeException $exception) {
@@ -84,12 +89,14 @@ final class AuthController extends Controller
 
         if (!$user) {
             Session::flash('error', 'Credenciales inválidas.');
+            $this->recordAuditEvent(null, 'login_failed', 'user', null, ['email' => $email], $request->ip(), $request->userAgent());
             $this->logAuthWarning('login_invalid_credentials', ['email' => $email]);
             Response::redirect('/login');
         }
 
         Auth::login((int)$user['id']);
         UserSession::create((int)$user['id'], session_id(), $request->ip(), $request->userAgent());
+        $this->recordAuditEvent((int) $user['id'], 'login_success', 'user', (string) $user['id'], ['email' => $email], $request->ip(), $request->userAgent());
         Response::redirect('/dashboard');
     }
 
@@ -101,9 +108,28 @@ final class AuthController extends Controller
             Response::redirect('/dashboard');
         }
 
+        $userId = Auth::id();
+        $this->recordAuditEvent($userId, 'logout', 'user', $userId === null ? null : (string) $userId, [], $request->ip(), $request->userAgent());
         UserSession::revokeBySessionId(session_id());
         Auth::logout();
         Response::redirect('/');
+    }
+
+
+    private function recordAuditEvent(
+        ?int $userId,
+        string $action,
+        ?string $entityType = null,
+        ?string $entityId = null,
+        array $metadata = [],
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): void {
+        try {
+            AuditLog::record($userId, $action, $entityType, $entityId, $metadata, $ipAddress, $userAgent);
+        } catch (\Throwable) {
+            error_log('Audit logging failed.');
+        }
     }
 
     private function logAuthWarning(string $event, array $context = []): void
