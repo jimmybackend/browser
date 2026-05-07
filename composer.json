@@ -1,6 +1,6 @@
 {
     "name": "marketing/browser",
-    "description": "Browser MVP: plataforma web independiente para b\u00fasqueda, correo, privacidad y marketing digital.",
+    "description": "Browser MVP: plataforma web independiente para búsqueda, correo, privacidad y marketing digital.",
     "type": "project",
     "license": "Apache-2.0",
     "require": {
@@ -17,7 +17,7 @@
     },
     "scripts": {
         "serve": "php -S localhost:8080 -t public",
-        "test": "phpunit"
+        "test": "vendor/bin/phpunit --configuration phpunit.xml.dist"
     },
     "config": {
         "sort-packages": true

@@ -36,7 +36,15 @@ fi
 echo ""
 echo "== PHPUnit =="
 if [ -f vendor/bin/phpunit ]; then
-  vendor/bin/phpunit || EXIT_CODE=1
+  if [ -f phpunit.xml.dist ]; then
+    vendor/bin/phpunit --configuration phpunit.xml.dist || EXIT_CODE=1
+  elif [ -f phpunit.xml ]; then
+    vendor/bin/phpunit --configuration phpunit.xml || EXIT_CODE=1
+  elif [ -d tests ]; then
+    vendor/bin/phpunit tests || EXIT_CODE=1
+  else
+    echo "No phpunit configuration or tests directory found. Skipping tests."
+  fi
 else
   echo "PHPUnit not found. Skipping tests."
 fi
