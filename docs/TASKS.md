@@ -192,3 +192,14 @@
 - [x] Agregar script diagnóstico no destructivo `scripts/rollback-check.sh` (sin rollback automático).
 - [x] Actualizar runbook y plan de automatización para incluir rollback como requisito previo de Fase 5.
 - [x] Confirmar que esta fase no modifica código funcional, migraciones, `.env` ni Nginx.
+
+
+## Fase 19: Diagnóstico CLI de errores recientes del crawler
+
+- [x] Revisar SQL real previo (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`).
+- [x] Agregar comando `php bin/browser crawl:errors` en `Kernel::handle()` y `help`.
+- [x] Implementar `crawlErrors()` usando `Env::load(BASE_PATH)` + `Database::connection()` y solo `SELECT`.
+- [x] Mostrar últimos errores de `crawl_urls` y `crawl_jobs` sin modificar datos.
+- [x] Agregar resumen por tipo aproximado de error para operación diaria.
+- [x] Actualizar `docs/OPERATIONS_RUNBOOK.md` y `docs/VALIDATION.md` con uso del comando.
+- [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.

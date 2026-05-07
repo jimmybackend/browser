@@ -401,3 +401,18 @@ Notas de entorno:
   - error exacto,
   - causa probable,
   - alternativa usada para validar.
+
+
+## Validación específica: diagnóstico de errores del crawler
+
+Comando de solo lectura para operación diaria:
+
+```bash
+php bin/browser crawl:errors
+```
+
+Valida que el comando liste:
+
+- últimos 20 `crawl_urls` con `status=failed`;
+- últimos 10 `crawl_jobs` con `status=failed`;
+- resumen agrupado por tipo aproximado de error.
