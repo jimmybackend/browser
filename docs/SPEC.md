@@ -11,28 +11,19 @@ Aplicación web MVC en PHP para una plataforma interna de búsqueda, autenticaci
 ## Stack real detectado
 
 - PHP >= 8.3 (`composer.json`)
-- Composer (autoload PSR-4 `Browser\\`)
+- Composer
 - `vlucas/phpdotenv` para carga de entorno
-- PHPUnit 11 (dependencia de desarrollo)
-- MySQL/MariaDB vía PDO
+- MySQL/MariaDB vía PDO (`pdo`, `pdo_mysql`)
+- PHPUnit 11 (`phpunit/phpunit` en `require-dev`)
 - Frontend server-rendered con vistas PHP + CSS/JS estático
-- Docker (Dockerfile, docker-compose, nginx.conf)
-- Script CLI propio (`bin/browser`) para doctor/migraciones/seed/admin
+- Docker + Nginx (`docker-compose.yml`, `docker/Dockerfile`, `docker/nginx.conf`)
 
-## Arquitectura y módulos implementados
+## Estado actual de CI/validación
 
-- Arquitectura MVC propia:
-  - Core: Router, Request, Response, Session, Auth, Database, Validator, Csrf
-  - Controladores: Auth, Dashboard, Profile, Search, Mail, Marketing, Admin
-  - Modelos: User, Role, UserRole, MarketingClient, MarketingCampaign, CrawlUrl, etc.
-  - Servicios: AuthService, MarketingService, SearchService, CrawlerService, AuditLogger
-- Módulos visibles por rutas:
-  - Público: `/`, `/about`
-  - Auth: `/register`, `/login`, `/logout`
-  - Usuario: `/dashboard`, `/profile`
-  - Productos: `/search`, `/mail`
-  - Marketing: `/marketing`, `/marketing/clients/*`, `/marketing/campaigns/*`
-  - Administración: `/admin`, `/admin/users*`
+- Workflow en `.github/workflows/ci.yml` con eventos `push`, `pull_request` y `workflow_dispatch`.
+- CI usa PHP 8.3 con extensiones `mbstring`, `intl`, `pdo`, `pdo_mysql`.
+- La validación central corre con `bash scripts/validate.sh`.
+- PHPUnit usa configuración explícita (`phpunit.xml.dist`) y fallback seguro en el script.
 
 ## Punto de entrada de la aplicación
 
@@ -42,9 +33,7 @@ Aplicación web MVC en PHP para una plataforma interna de búsqueda, autenticaci
 ## Base de datos
 
 - Configuración en `config/database.php` por variables `DB_*`.
-- Conexión centralizada en `app/Core/Database.php` usando PDO con:
-  - `PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION`
-  - `PDO::ATTR_EMULATE_PREPARES => false`
+- Conexión centralizada en `app/Core/Database.php` usando PDO con prepared statements habilitados.
 - Esquema versionado con SQL en `database/migrations/*.sql`.
 - Datos semilla en `database/seeders/*.sql`.
 
@@ -56,31 +45,10 @@ Variables mínimas detectadas en `.env.example`:
 - DB: `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
 - Crawler: `CRAWL_AUTO_QUEUE_*`
 
-## Estado de validación actual
+## Riesgos técnicos actuales
 
-- `bash scripts/validate.sh` ejecuta:
-  - lint de PHP ✅
-  - `composer validate` ✅
-  - `composer install` ❌ (fallo de red/proxy hacia Packagist en este entorno)
-  - PHPUnit y PHPStan omitidos por no existir `vendor/bin/*` al no instalar dependencias
-  - escaneo básico de nombres sensibles ✅
-
-## Riesgos técnicos y de seguridad detectados
-
-1. **No existe `composer.lock`**: instalaciones no reproducibles.
-2. **Dependencia de red para validación**: el flujo de CI/local falla si no hay acceso a Packagist.
-3. **Sin suite real de pruebas funcionales**: solo prueba base de estructura.
-4. **Sin PHPStan configurado**: análisis estático no implementado aún.
-5. **Verificación de secretos limitada por nombre de archivo**: no hay escaneo de contenido.
-6. **Riesgo de exposición de logs en `error_log`** si infraestructura no separa canales correctamente (aunque el controlador evita registrar password/token).
-
-## Criterios de aceptación generales (actualizados)
-
-El proyecto puede considerarse listo para revisión funcional cuando:
-
-- La instalación local funcione con `.env` documentado.
-- `composer install` se ejecute con lockfile reproducible.
-- La DB pueda migrarse/seedearse con comandos documentados.
-- Flujos de auth/marketing/admin tengan pruebas (mínimo integración básica).
-- Validaciones de seguridad (CSRF, sesiones, prepared statements) estén verificadas y auditadas por checklist.
-- El pipeline de validación (lint + tests + estático) pase en entorno CI.
+1. No existe `composer.lock`: instalaciones no reproducibles.
+2. Dependencia de conectividad de Composer para instalar dependencias.
+3. Suite de pruebas limitada (sin pruebas funcionales reales).
+4. PHPStan opcional/no instalado en entornos donde no exista `vendor/bin/phpstan`.
+5. Validación de DB no ejecutada contra instancia real en esta corrida.

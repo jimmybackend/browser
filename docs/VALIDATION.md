@@ -12,8 +12,12 @@ El script valida, en este orden:
 
 1. Sintaxis PHP (`php -l` en archivos del repo, excluyendo `vendor`/`node_modules`).
 2. Composer (`composer validate` + `composer install`).
-3. PHPUnit (`vendor/bin/phpunit` si existe).
-4. PHPStan (`vendor/bin/phpstan analyse` si existe).
+3. PHPUnit (si existe `vendor/bin/phpunit`) con fallback seguro:
+   - `vendor/bin/phpunit --configuration phpunit.xml.dist` si existe `phpunit.xml.dist`.
+   - `vendor/bin/phpunit --configuration phpunit.xml` si existe `phpunit.xml`.
+   - `vendor/bin/phpunit tests` si no hay config pero sí existe `tests/`.
+   - Nunca ejecuta `vendor/bin/phpunit` sin configuración/parámetro explícito.
+4. PHPStan (`vendor/bin/phpstan analyse`) solo si está instalado.
 5. Escaneo básico de nombres de archivos sensibles (`.env`, `*.pem`, `*.key`, etc.).
 
 ## Validación local (manual)
@@ -33,10 +37,10 @@ composer validate --no-check-publish
 composer install --no-interaction --prefer-dist --no-progress
 ```
 
-### PHPUnit
+### PHPUnit (con configuración explícita)
 
 ```bash
-vendor/bin/phpunit
+vendor/bin/phpunit --configuration phpunit.xml.dist
 ```
 
 ### PHPStan
@@ -61,20 +65,20 @@ Síntoma típico:
 - `curl error 56 while downloading https://repo.packagist.org/packages.json`
 - `CONNECT tunnel failed, response 403`
 
-Esto indica bloqueo de conectividad (proxy/firewall/red), no necesariamente error de código del proyecto.
+Esto significa un problema de conectividad (proxy/firewall/red) del entorno y no necesariamente un error de código del repositorio.
 
 Acciones recomendadas:
 
 1. Verificar salida a `repo.packagist.org` en el entorno CI/local.
 2. Configurar proxy corporativo correctamente para Composer si aplica.
 3. Usar mirror interno o caché de paquetes en CI.
-4. Generar `composer.lock` en un entorno con conectividad estable:
+4. Generar `composer.lock` en un entorno con conectividad estable.
 
-```bash
-composer update
-git add composer.lock
-git commit -m "build: add composer lockfile"
-```
+## Qué significa que PHPStan se omita
+
+Si `vendor/bin/phpstan` no existe, el script reporta PHPStan como omitido (skip).
+
+Esto no implica que el análisis estático haya pasado; solo indica que la herramienta no está instalada/configurada en el entorno actual.
 
 ## Qué significa que PHPUnit/PHPStan no corran por falta de `vendor`
 
@@ -85,27 +89,3 @@ En ese caso:
 - El script reporta estas validaciones como omitidas (skip).
 - Debe documentarse explícitamente en el PR como limitación del entorno.
 - No debe afirmarse que pruebas/unit/static analysis pasaron si no se ejecutaron.
-
-## Validación funcional recomendada
-
-Revisar manualmente:
-
-- Instalación limpia.
-- Configuración de entorno (`.env`).
-- Conexión a base de datos.
-- Login/logout.
-- Rutas protegidas.
-- Formularios principales.
-- CRUD principal.
-- Validaciones y mensajes de error.
-- Logs y permisos.
-
-## Definición de terminado
-
-Una tarea se considera terminada cuando:
-
-- El código/documentación fue actualizado.
-- La validación aplicable fue ejecutada.
-- Los errores fueron corregidos o documentados.
-- El PR explica cambios, pruebas, riesgos y pendientes.
-- No hay secretos expuestos.

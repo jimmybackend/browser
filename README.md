@@ -170,6 +170,7 @@ Validación recomendada:
 
 ```bash
 bash scripts/validate.sh
+composer test
 ```
 
 Validación manual (si aplica):
@@ -178,7 +179,7 @@ Validación manual (si aplica):
 find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
 composer validate --no-check-publish
 composer install --no-interaction --prefer-dist --no-progress
-vendor/bin/phpunit
+vendor/bin/phpunit --configuration phpunit.xml.dist
 vendor/bin/phpstan analyse
 ```
 
@@ -216,3 +217,15 @@ Para una instalación productiva en Ubuntu con Nginx, PHP-FPM y MySQL remoto:
 ## Licencia
 
 Apache 2.0.
+
+
+## Qué hacer si Composer falla por red/proxy
+
+Si `composer install` falla con errores como `curl error 56` o `CONNECT tunnel failed, response 403`, normalmente es un problema de conectividad/proxy del entorno.
+
+Pasos sugeridos:
+
+1. Verificar acceso de red a `repo.packagist.org`.
+2. Configurar proxy corporativo para Composer si aplica.
+3. Reintentar en una red con salida abierta o con mirror interno.
+4. Generar `composer.lock` cuando exista conectividad estable.
