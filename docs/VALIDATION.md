@@ -115,3 +115,18 @@ En ese caso:
 - El script reporta estas validaciones como omitidas (skip).
 - Debe documentarse explícitamente en el PR como limitación del entorno.
 - No debe afirmarse que pruebas/unit/static analysis pasaron si no se ejecutaron.
+
+
+## Validación específica de persistencia de sesiones
+
+Cambios cubiertos en esta iteración:
+
+- Se agrega `app/Models/UserSession.php` con consultas preparadas PDO para crear/revocar/consultar sesiones activas en `user_sessions`.
+- Se persiste sesión autenticada en login/register desde `AuthController` inmediatamente después de `Auth::login(...)`.
+- En logout se revoca primero la sesión persistida y después se destruye la sesión PHP.
+- Nunca se guarda `session_id()` en texto plano: se almacena únicamente `hash('sha256', session_id())`.
+
+Pruebas automáticas agregadas (sin DB real):
+
+- `tests/UserSessionTest.php` valida existencia del modelo.
+- `tests/UserSessionTest.php` valida formato SHA-256 (64 hex) del hash de sesión.
