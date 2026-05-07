@@ -1,0 +1,75 @@
+name: Feature request
+description: Solicitud de mejora funcional o técnica.
+title: "[FEATURE] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objetivo
+      description: ¿Qué valor aporta esta mejora?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance
+      description: Define exactamente qué se incluye.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Fuera de alcance
+      description: Qué no debe tocar esta tarea.
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_components
+    attributes:
+      label: Rutas/controladores/modelos/vistas relacionados
+      description: Si se conocen, enuméralos con rutas reales.
+      placeholder: public/index.php, app/Controllers/AuthController.php, app/Views/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_validation
+    attributes:
+      label: Validación esperada
+      description: Pruebas automáticas/manuales para aceptar la mejora.
+      placeholder: bash scripts/validate.sh, prueba manual de flujo X.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Riesgos
+      description: Riesgos técnicos, operativos o de seguridad.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: touches_database
+    attributes:
+      label: ¿Toca base de datos?
+      options:
+        - "No"
+        - "Sí"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: touches_production
+    attributes:
+      label: ¿Toca producción/despliegue?
+      options:
+        - "No"
+        - "Sí"
+    validations:
+      required: true

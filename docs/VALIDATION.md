@@ -233,3 +233,25 @@ Validación ejecutada:
 
 - Ejecutar `bash scripts/validate.sh` si el entorno lo permite.
 - Si falla por red/proxy/dependencias externas, documentar comando, error y causa probable en el PR.
+
+## Validación específica: plantillas de Issues/PR y flujo Codex
+
+Cambios cubiertos en esta iteración:
+
+- Se agregó `.github/pull_request_template.md` con checklist de resumen, tipo de cambio, controles de secretos, estado de BD, pruebas, limitaciones de entorno, riesgos y validación manual.
+- Se agregaron plantillas de issue en `.github/ISSUE_TEMPLATE/`:
+  - `bug_report.yml`
+  - `feature_request.yml`
+  - `codex_task.yml`
+  - `database_sensitive_task.yml`
+- Se agregó `docs/CODEX_WORKFLOW.md` para formalizar el flujo `1 tarea = 1 chat nuevo = 1 PR = 1 merge manual`, sin auto-merge y con aprobación humana para producción/BD.
+- No se modificó código funcional de la aplicación.
+- No se modificaron migraciones ni estructura de base de datos.
+- No se tocó `.env` ni credenciales.
+- No se modificó Nginx.
+
+Validación ejecutada:
+
+- Ejecutar `bash scripts/validate.sh` si el entorno lo permite.
+- Validar sintaxis YAML de plantillas con parser local (por ejemplo `python3 -c "import yaml,sys; yaml.safe_load(open(path))"`).
+- Si hay fallos de red/proxy en Composer/Packagist, documentar error exacto y causa probable en el PR.

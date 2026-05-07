@@ -1,0 +1,97 @@
+name: Bug report
+description: Reportar un defecto real con contexto reproducible.
+title: "[BUG] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: Descripción del problema
+      description: Explica qué comportamiento incorrecto observas.
+      placeholder: El módulo X devuelve error 500 al guardar...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Pasos para reproducir
+      description: Lista pasos exactos y datos de entrada usados.
+      placeholder: |
+        1. Ir a ...
+        2. Completar ...
+        3. Presionar ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_result
+    attributes:
+      label: Resultado esperado
+      placeholder: Debe mostrar mensaje de éxito y persistir cambios.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_result
+    attributes:
+      label: Resultado actual
+      placeholder: Muestra error 500 y no guarda datos.
+    validations:
+      required: true
+
+  - type: textarea
+    id: relevant_logs
+    attributes:
+      label: Logs relevantes
+      description: Pega trazas/logs sin secretos ni credenciales.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: commands_run
+    attributes:
+      label: Comandos ejecutados
+      description: Incluye comandos de validación o reproducción.
+      render: shell
+      placeholder: |
+        bash scripts/validate.sh
+        vendor/bin/phpunit --configuration phpunit.xml.dist
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Entorno
+      description: ¿Dónde ocurre el problema?
+      options:
+        - local
+        - VM
+        - CI
+        - otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: database_context
+    attributes:
+      label: Contexto de base de datos (si aplica)
+      description: Si involucra BD, indica tabla/campo reales y SQL revisado.
+      placeholder: |
+        Tabla real: users
+        Campo real: email
+        SQL revisado: database/migrations/001_initial_schema.sql
+    validations:
+      required: false
+
+  - type: textarea
+    id: production_impact
+    attributes:
+      label: Impacto en producción
+      description: Indica severidad, alcance y mitigación temporal.
+      placeholder: Afecta login en producción para usuarios nuevos.
+    validations:
+      required: true

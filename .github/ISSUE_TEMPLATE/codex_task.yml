@@ -1,0 +1,70 @@
+name: Codex task
+description: Plantilla para crear tareas claras, seguras y revisables para Codex.
+title: "[CODEX TASK] "
+labels:
+  - codex
+body:
+  - type: input
+    id: task_title
+    attributes:
+      label: Título de tarea
+      placeholder: Endurecer validación CSRF en formulario de login
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "### Reglas de ejecución obligatorias\n- 1 tarea = 1 chat nuevo = 1 PR.\n- Crear rama nueva desde `main`.\n- No reutilizar ramas anteriores.\n- No actualizar PRs viejos.\n- No hacer merge automático."
+
+  - type: textarea
+    id: allowed_files
+    attributes:
+      label: Archivos permitidos
+      description: Rutas que sí se pueden modificar.
+      placeholder: docs/, .github/ISSUE_TEMPLATE/, .github/pull_request_template.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: forbidden_files
+    attributes:
+      label: Archivos prohibidos
+      description: Incluye explícitamente `.env`, credenciales, Nginx y migraciones si no aplica.
+      placeholder: .env, docker/nginx.conf, database/migrations/
+    validations:
+      required: true
+
+  - type: textarea
+    id: security_rules
+    attributes:
+      label: Reglas de seguridad
+      description: Enumera restricciones y controles mínimos.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_validations
+    attributes:
+      label: Validaciones esperadas
+      placeholder: bash scripts/validate.sh + validaciones manuales
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Criterios de aceptación
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: workflow_confirmations
+    attributes:
+      label: Confirmaciones de flujo
+      options:
+        - label: Confirmo que no se hará merge automático.
+          required: true
+        - label: Confirmo que no se actualizarán PRs viejos.
+          required: true
+        - label: Confirmo que no se reutilizarán ramas previas.
+          required: true
