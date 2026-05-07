@@ -218,3 +218,18 @@ Pruebas automáticas agregadas (sin red y sin DB real):
 - `tests/CrawlerServiceTest.php` valida rechazo de fragmentos/esquemas inseguros.
 - `tests/CrawlerServiceTest.php` valida encoding seguro de espacios y preservación de segmentos ya codificados.
 - `tests/CrawlerServiceTest.php` valida null-safety de `parseHtml()` sin `<title>`, sin meta description y sin `lang`.
+
+
+## Validación específica: documentación de branch protection
+
+Cambios cubiertos en esta iteración:
+
+- Se agregó `docs/BRANCH_PROTECTION.md` con lineamientos para proteger `main` mediante PR obligatorio, checks obligatorios de CI, restricción de force push y restricción de borrado.
+- Se documentó explícitamente que Codex trabaja creando PRs y el merge se mantiene manual (Jimmy), sin auto-merge por ahora.
+- Se dejó explícito que despliegues a producción y cambios de base de datos continúan bajo aprobación humana.
+- No se realizaron cambios en código funcional, migraciones, configuración de Nginx ni archivos `.env`/credenciales.
+
+Validación ejecutada:
+
+- Ejecutar `bash scripts/validate.sh` si el entorno lo permite.
+- Si falla por red/proxy/dependencias externas, documentar comando, error y causa probable en el PR.
