@@ -150,9 +150,17 @@ final class CrawlerService
         $title = $titleNode?->textContent !== null ? trim($titleNode->textContent) : null;
 
         $descNode = $xpath->query('//meta[@name="description"]')->item(0);
-        $description = $descNode?->attributes?->getNamedItem('content')?->textContent;
+        $descriptionRaw = $descNode?->attributes?->getNamedItem('content')?->textContent;
+        $description = is_string($descriptionRaw) ? trim($descriptionRaw) : null;
+        if ($description === '') {
+            $description = null;
+        }
 
-        $lang = $dom->documentElement?->getAttribute('lang') ?: null;
+        $langRaw = $dom->documentElement?->getAttribute('lang');
+        $lang = is_string($langRaw) ? trim($langRaw) : null;
+        if ($lang === '') {
+            $lang = null;
+        }
 
         $text = trim((string) preg_replace('/\s+/', ' ', strip_tags($html)));
         $text = mb_substr($text, 0, 65000);
@@ -172,9 +180,9 @@ final class CrawlerService
             'url' => $url,
             'domain' => strtolower((string) ($parts['host'] ?? '')),
             'title' => $title !== '' ? mb_substr($title, 0, 255) : null,
-            'description' => $description !== null ? mb_substr(trim($description), 0, 2000) : null,
+            'description' => $description !== null ? mb_substr($description, 0, 2000) : null,
             'content_text' => $text,
-            'language' => $lang !== '' ? mb_substr($lang, 0, 10) : null,
+            'language' => $lang !== null ? mb_substr($lang, 0, 10) : null,
             'links' => array_values(array_unique($links)),
         ];
     }
@@ -191,7 +199,39 @@ final class CrawlerService
         }
 
         if ($base !== null && !preg_match('/^https?:\/\//i', $url)) {
-            $url = rtrim($base, '/') . '/' . ltrim($url, '/');
+            $baseParts = parse_url($base);
+            if (
+                $baseParts === false
+                || empty($baseParts['scheme'])
+                || empty($baseParts['host'])
+            ) {
+                return null;
+            }
+
+            $scheme = strtolower((string) $baseParts['scheme']);
+            if (!in_array($scheme, ['http', 'https'], true)) {
+                return null;
+            }
+
+            $host = strtolower((string) $baseParts['host']);
+            $basePath = (string) ($baseParts['path'] ?? '/');
+
+            if (str_starts_with($url, '//')) {
+                $url = $scheme . ':' . $url;
+            } elseif (str_starts_with($url, '/')) {
+                $url = $scheme . '://' . $host . $url;
+            } elseif (str_starts_with($url, '?')) {
+                $url = $scheme . '://' . $host . $basePath . $url;
+            } else {
+                $baseDir = str_ends_with($basePath, '/')
+                    ? $basePath
+                    : (string) preg_replace('/\/[^\/]*$/', '/', $basePath);
+                if ($baseDir === '') {
+                    $baseDir = '/';
+                }
+
+                $url = $scheme . '://' . $host . $baseDir . ltrim($url, '/');
+            }
         }
 
         $parts = parse_url($url);
@@ -206,9 +246,40 @@ final class CrawlerService
 
         $host = strtolower((string) $parts['host']);
         $path = $parts['path'] ?? '/';
+        if ($path === '') {
+            $path = '/';
+        }
+        $path = $this->encodePathSegments($path);
         $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+        if ($query !== '') {
+            $query = '?' . str_replace(' ', '%20', ltrim($query, '?'));
+        }
 
         return $scheme . '://' . $host . $path . $query;
+    }
+
+    private function encodePathSegments(string $path): string
+    {
+        $segments = explode('/', $path);
+        $encoded = array_map(
+            static function (string $segment): string {
+                return preg_replace_callback(
+                    '/(?:%[0-9A-Fa-f]{2})|[^%]+/',
+                    static function (array $matches): string {
+                        $part = $matches[0];
+                        if (preg_match('/^%[0-9A-Fa-f]{2}$/', $part) === 1) {
+                            return strtoupper($part);
+                        }
+
+                        return rawurlencode($part);
+                    },
+                    $segment
+                ) ?? '';
+            },
+            $segments
+        );
+
+        return implode('/', $encoded);
     }
 
     private function assertSafeTarget(string $url): void
