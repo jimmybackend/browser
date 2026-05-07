@@ -135,3 +135,13 @@
 - [x] Crear `docs/CODEX_WORKFLOW.md` con el flujo `1 tarea = 1 chat nuevo = 1 PR = 1 merge manual`.
 - [x] Referenciar aprobación humana obligatoria para producción y base de datos.
 - [x] Confirmar que esta fase no modifica código funcional, migraciones, `.env` ni configuración Nginx.
+
+## Fase 14: Documentación y diagnóstico de cron real del crawler
+
+- [x] Revisar SQL real antes de documentar tablas del crawler (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`).
+- [x] Documentar diferencia entre auto-queue (crea jobs) y cron (procesa jobs) en `docs/CRAWLER_CRON.md`.
+- [x] Documentar cron recomendado con `flock` ejecutando `php bin/browser crawl:run --limit=1` cada 5 minutos.
+- [x] Agregar script diagnóstico no destructivo `scripts/crawler-cron-check.sh`.
+- [x] Aclarar que no se automatiza producción ni se instala cron automáticamente.
+- [x] Aclarar que la instalación de cron debe ser manual (`crontab -e`) por humano.
+- [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.

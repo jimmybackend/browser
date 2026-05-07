@@ -255,3 +255,35 @@ Validación ejecutada:
 - Ejecutar `bash scripts/validate.sh` si el entorno lo permite.
 - Validar sintaxis YAML de plantillas con parser local (por ejemplo `python3 -c "import yaml,sys; yaml.safe_load(open(path))"`).
 - Si hay fallos de red/proxy en Composer/Packagist, documentar error exacto y causa probable en el PR.
+
+## Validación específica: cron del crawler (documentación + diagnóstico)
+
+Cambios cubiertos en esta iteración:
+
+- Se agregó `docs/CRAWLER_CRON.md` para dejar explícito que auto-queue crea jobs en `crawl_jobs`, pero el procesamiento real lo ejecuta cron con `php bin/browser crawl:run --limit=1`.
+- Se agregó `scripts/crawler-cron-check.sh` como diagnóstico no destructivo (sin instalar cron, sin tocar crontab, sin sudo, sin leer contenido de `.env`).
+- Se documentó validación manual del flujo jobs -> URLs descubiertas -> páginas indexadas (`crawl_jobs`, `crawl_urls`, `indexed_pages`).
+
+Comandos recomendados:
+
+```bash
+bash -n scripts/crawler-cron-check.sh
+bash scripts/crawler-cron-check.sh
+php bin/browser crawl:status
+php bin/browser crawl:run --limit=1
+php bin/browser crawl:status
+tail -n 100 storage/logs/crawler.log
+```
+
+También ejecutar validación general cuando el entorno lo permita:
+
+```bash
+bash scripts/validate.sh
+```
+
+Si `scripts/validate.sh` falla por conectividad a Packagist/proxy (ej. `curl error 56`, `CONNECT tunnel failed, response 403`), documentar en el PR:
+
+- comando ejecutado,
+- error exacto,
+- causa probable (red/proxy/firewall),
+- alternativa usada en la validación local.
