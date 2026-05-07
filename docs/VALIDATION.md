@@ -49,6 +49,26 @@ vendor/bin/phpunit --configuration phpunit.xml.dist
 vendor/bin/phpstan analyse
 ```
 
+## Cobertura baseline de PHPUnit (sin DB)
+
+La suite actual incluye pruebas mínimas de estructura en `tests/BootstrapTest.php` para validar que existan:
+
+- `app/`
+- `public/index.php`
+- `bin/browser`
+- `database/migrations/`
+- `.env.example`
+- `AGENTS.md`
+- `phpunit.xml.dist`
+- `scripts/validate.sh`
+
+También valida que `composer.json` mantenga:
+
+- `autoload.psr-4.Browser\\` apuntando a `app/`
+- script `test` con `vendor/bin/phpunit --configuration phpunit.xml.dist`
+
+Estas pruebas no requieren MySQL ni conexión externa.
+
 ## Validación en CI
 
 Workflow: `.github/workflows/ci.yml`

@@ -27,6 +27,7 @@
 
 - [ ] Generar y versionar `composer.lock` para builds reproducibles (no generado en este cambio).
 - [ ] Agregar pruebas funcionales reales más allá de `tests/BootstrapTest.php` (auth, rutas protegidas, marketing).
+- [x] Agregar pruebas base de estructura de proyecto (rutas/archivos críticos y checks de `composer.json` sin dependencia de DB).
 - [ ] Incorporar/anclar PHPStan y configuración (`phpstan.neon`) si será obligatorio.
 - [ ] Validación real de base de datos (migraciones/seed contra instancia ejecutándose) en entorno verificable.
 - [ ] Fortalecer escaneo de secretos por contenido (no solo por nombres de archivo).
@@ -44,6 +45,7 @@
 
 - [x] Existe validación de sintaxis PHP (`scripts/validate.sh`).
 - [x] Ajustar ejecución de PHPUnit para no correr nunca sin configuración explícita o ruta de tests.
+- [x] Agregar pruebas baseline de estructura (sin DB) en `tests/BootstrapTest.php`.
 - [ ] Agregar pruebas funcionales mínimas si el proyecto tiene estructura para pruebas.
 - [ ] Agregar PHPStan si aplica.
 - [x] Workflow de GitHub Actions presente y alineado a script de validación.
