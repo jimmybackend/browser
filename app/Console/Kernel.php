@@ -36,6 +36,7 @@ final class Kernel
             'crawl:add' => $this->crawlAdd(),
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
+            'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
             'auth:doctor' => $this->authDoctor(),
             'admin:create' => $this->adminCreate(),
@@ -57,6 +58,7 @@ final class Kernel
         $this->line('  crawl:add     Crea un crawl job en estado queued');
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
+        $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
     }
@@ -298,6 +300,115 @@ final class Kernel
             $this->line('Sin jobs.');
         }
         return 0;
+    }
+
+
+    private function indexStatus(): int
+    {
+        Env::load(BASE_PATH);
+
+        try {
+            $pdo = Database::connection();
+
+            $totalPagesStmt = $pdo->prepare('SELECT COUNT(*) FROM indexed_pages');
+            $totalPagesStmt->execute();
+            $totalPages = (int) $totalPagesStmt->fetchColumn();
+
+            $lastIndexedStmt = $pdo->prepare('SELECT id, url, status, created_at, updated_at, last_crawled_at FROM indexed_pages ORDER BY created_at DESC LIMIT 1');
+            $lastIndexedStmt->execute();
+            $lastIndexed = $lastIndexedStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            $jobsByStatusStmt = $pdo->prepare('SELECT status, COUNT(*) AS total FROM crawl_jobs GROUP BY status ORDER BY status ASC');
+            $jobsByStatusStmt->execute();
+            $jobsByStatus = $jobsByStatusStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $urlsByStatusStmt = $pdo->prepare('SELECT status, COUNT(*) AS total FROM crawl_urls GROUP BY status ORDER BY status ASC');
+            $urlsByStatusStmt->execute();
+            $urlsByStatus = $urlsByStatusStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $failedJobsStmt = $pdo->prepare('SELECT id, seed_url, error_message, created_at, finished_at FROM crawl_jobs WHERE status = :status ORDER BY id DESC LIMIT 10');
+            $failedJobsStmt->execute(['status' => 'failed']);
+            $failedJobs = $failedJobsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $failedUrlsStmt = $pdo->prepare('SELECT url, error_message, http_status, updated_at FROM crawl_urls WHERE status = :status ORDER BY updated_at DESC, id DESC LIMIT 10');
+            $failedUrlsStmt->execute(['status' => 'failed']);
+            $failedUrls = $failedUrlsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->line('=== Index Status ===');
+            $this->line('Total indexed_pages: ' . $totalPages);
+
+            if ($lastIndexed === null) {
+                $this->line('Última página indexada: Sin páginas indexadas');
+            } else {
+                $this->line(sprintf(
+                    'Última página indexada: #%d | status=%s | created_at=%s | updated_at=%s | last_crawled_at=%s | url=%s',
+                    (int) ($lastIndexed['id'] ?? 0),
+                    (string) ($lastIndexed['status'] ?? '-'),
+                    (string) ($lastIndexed['created_at'] ?? '-'),
+                    (string) ($lastIndexed['updated_at'] ?? '-'),
+                    (string) ($lastIndexed['last_crawled_at'] ?? '-'),
+                    (string) ($lastIndexed['url'] ?? '-')
+                ));
+            }
+
+            $this->line('');
+            $this->line('=== Crawl Jobs por status ===');
+            if ($jobsByStatus === []) {
+                $this->line('Sin crawl_jobs');
+            } else {
+                foreach ($jobsByStatus as $row) {
+                    $this->line(sprintf('  %s: %d', (string) $row['status'], (int) $row['total']));
+                }
+            }
+
+            $this->line('');
+            $this->line('=== Crawl URLs por status ===');
+            if ($urlsByStatus === []) {
+                $this->line('Sin crawl_urls');
+            } else {
+                foreach ($urlsByStatus as $row) {
+                    $this->line(sprintf('  %s: %d', (string) $row['status'], (int) $row['total']));
+                }
+            }
+
+            $this->line('');
+            $this->line('=== Últimos 10 crawl_jobs fallidos ===');
+            if ($failedJobs === []) {
+                $this->line('Sin errores recientes');
+            } else {
+                foreach ($failedJobs as $job) {
+                    $this->line(sprintf(
+                        '  #%d | seed_url=%s | error=%s | created_at=%s | finished_at=%s',
+                        (int) ($job['id'] ?? 0),
+                        (string) ($job['seed_url'] ?? '-'),
+                        (string) ($job['error_message'] ?? '-'),
+                        (string) ($job['created_at'] ?? '-'),
+                        (string) ($job['finished_at'] ?? '-')
+                    ));
+                }
+            }
+
+            $this->line('');
+            $this->line('=== Últimos 10 crawl_urls fallidos ===');
+            if ($failedUrls === []) {
+                $this->line('Sin errores recientes');
+            } else {
+                foreach ($failedUrls as $row) {
+                    $this->line(sprintf(
+                        '  url=%s | http_status=%s | error=%s | updated_at=%s',
+                        (string) ($row['url'] ?? '-'),
+                        (string) ($row['http_status'] ?? '-'),
+                        (string) ($row['error_message'] ?? '-'),
+                        (string) ($row['updated_at'] ?? '-')
+                    ));
+                }
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo obtener index:status. Verifica conexión a base de datos.');
+            return 1;
+        }
     }
 
     private function adminCreate(): int
