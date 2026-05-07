@@ -93,3 +93,15 @@
 - [x] Mantener resiliencia: errores de auditoría no bloquean login/logout y solo registran `error_log` genérico.
 - [x] Agregar pruebas PHPUnit mínimas sin DB real para `AuditLog`.
 - [x] Confirmar que no se modifica la estructura de `audit_logs` ni migraciones.
+
+
+## Fase 10: Consulta protegida de auditoría
+
+- [x] Revisar esquema real en `database/migrations/001_initial_schema.sql` y SQL complementario del repositorio antes de programar.
+- [x] Reutilizar tabla real `audit_logs` sin cambios de estructura ni migraciones.
+- [x] Extender `AuditLog` con listado filtrado seguro (`listRecent`), conteo (`countByFilters`), decodificación de IP y sanitización de metadata para salida.
+- [x] Crear `AuditLogController` con ruta protegida para admins en `GET /admin/audit-logs`.
+- [x] Crear vista `app/Views/audit/index.php` con filtros GET (`action`, `user_id`, `date_from`, `date_to`) y salida escapada.
+- [x] Evitar exposición de `session_id`, `session_token_hash`, contraseñas y tokens CSRF en metadata mostrada.
+- [x] Agregar pruebas PHPUnit mínimas sin DB real para existencia de controlador/vista y checks de no exposición de labels sensibles.
+- [x] Confirmar que no se modificó la estructura de `audit_logs`.

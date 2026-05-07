@@ -181,3 +181,21 @@ Pruebas automáticas agregadas (sin DB real):
 - `tests/AuditLogTest.php` valida existencia de modelo y uso de tabla `audit_logs`.
 - `tests/AuditLogTest.php` valida sanitización de metadata sensible.
 - `tests/AuditLogTest.php` valida codificación JSON/NULL de metadata.
+
+
+## Validación específica de visor protegido de auditoría
+
+Cambios cubiertos en esta iteración:
+
+- Se revisó el esquema SQL real en `database/migrations/001_initial_schema.sql` y el inventario SQL del repositorio (`database/migrations/*.sql`, `database/seeders/*.sql`) para evitar asumir tablas/campos inexistentes.
+- Se agregó `GET /admin/audit-logs` en `public/index.php`, protegida por login y verificación de rol `admin` usando el sistema real de roles (`user_roles`/`roles`).
+- `app/Models/AuditLog.php` ahora consulta `audit_logs` con prepared statements, filtros por `action`, `user_id`, `date_from`, `date_to`, límite acotado y decodificación segura de `ip_address` con `inet_ntop()`.
+- La vista `app/Views/audit/index.php` muestra `created_at`, `user_id`, `action`, `entity_type`, `entity_id`, `ip_address`, `user_agent` truncado y metadata sanitizada con salida escapada.
+- No se exponen `session_id`, `session_token_hash`, `password` ni `_csrf_token` en metadata mostrada.
+- No se modificaron migraciones ni la estructura de `audit_logs`.
+
+Pruebas automáticas agregadas (sin DB real):
+
+- `tests/AuditLogViewerFeatureTest.php` valida existencia de controlador y vista.
+- `tests/AuditLogViewerFeatureTest.php` valida presencia de `listRecent` en `AuditLog`.
+- `tests/AuditLogViewerFeatureTest.php` valida ausencia de labels sensibles en la vista de auditoría.
