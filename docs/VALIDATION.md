@@ -130,3 +130,17 @@ Pruebas automáticas agregadas (sin DB real):
 
 - `tests/UserSessionTest.php` valida existencia del modelo.
 - `tests/UserSessionTest.php` valida formato SHA-256 (64 hex) del hash de sesión.
+
+
+## Validación específica de middleware de autenticación
+
+Cambios cubiertos en esta iteración:
+
+- `AuthMiddleware` ahora exige tres condiciones para rutas protegidas: usuario autenticado (`user_id`), `session_id()` presente y sesión persistida activa en `user_sessions` mediante `UserSession::isActive(...)`.
+- Si la sesión persistida está revocada o expirada, se ejecuta cierre de sesión y redirección a `/login`.
+- Si ocurre error durante la validación en DB, la política es fail-closed: cierre de sesión, redirección a `/login` y registro de error genérico sin datos sensibles.
+
+Pruebas automáticas agregadas (sin DB real):
+
+- `tests/AuthMiddlewareTest.php` verifica que el middleware invoque `UserSession::isActive($sessionId)`.
+- `tests/AuthMiddlewareTest.php` verifica que, para sesión inválida, se cierre sesión y se redirija a `/login`.

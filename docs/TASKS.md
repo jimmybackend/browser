@@ -62,3 +62,12 @@
 - [x] Limitar `user_agent` a 500 caracteres.
 - [x] Definir `expires_at` con expiración razonable por defecto (+2 horas).
 - [x] Agregar pruebas PHPUnit mínimas sin dependencia de MySQL real para `UserSession`.
+
+
+## Fase 7: Enforce de sesión persistida en rutas protegidas
+
+- [x] Actualizar `AuthMiddleware` para exigir `user_id` en sesión PHP y `session_id()` no vacío antes de permitir acceso.
+- [x] Validar sesión persistida con `UserSession::isActive(session_id())` en rutas protegidas.
+- [x] Si la sesión persistida está revocada o expirada, cerrar sesión PHP y redirigir a `/login`.
+- [x] Si falla la validación por error de DB, aplicar fail-closed: cerrar sesión, redirigir y registrar error genérico con `error_log`.
+- [x] Agregar pruebas PHPUnit mínimas sin DB real para cubrir el comportamiento esperado del middleware.
