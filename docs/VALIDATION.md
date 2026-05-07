@@ -85,6 +85,12 @@ Síntoma típico:
 - `curl error 56 while downloading https://repo.packagist.org/packages.json`
 - `CONNECT tunnel failed, response 403`
 
+Estado verificado en este repositorio (2026-05-07):
+
+- `composer update --no-interaction --no-progress` falló con los errores anteriores, por lo que `composer.lock` sigue pendiente.
+- Mientras exista este bloqueo, la instalación no es totalmente reproducible entre entornos.
+- En cuanto haya acceso a Packagist, generar `composer.lock` con `composer update`, versionarlo y volver a instalar con `composer install` para validación determinística.
+
 Esto significa un problema de conectividad (proxy/firewall/red) del entorno y no necesariamente un error de código del repositorio.
 
 Acciones recomendadas:
