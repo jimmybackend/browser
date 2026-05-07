@@ -87,3 +87,12 @@ Deben cumplirse todas:
 ## Recomendación operativa
 
 Mantener el esquema actual (entre Fase 3 y Fase 4) hasta estabilizar CI, pruebas y rollback; luego avanzar en pasos pequeños, medibles y reversibles.
+
+## Fase 4 inicial: validación manual pre-deploy (workflow_dispatch)
+
+Se agrega el workflow `.github/workflows/manual-predeploy-validation.yml` como primer paso real de Fase 4.
+
+- Es un workflow **manual** (GitHub UI -> Actions -> *Manual pre-deploy validation* -> *Run workflow*).
+- Ejecuta validaciones técnicas antes de tocar la VM.
+- **No hace deploy**, **no corre migraciones en producción**, **no usa secretos** y **no se conecta a la VM**.
+- Jimmy mantiene el control: sigue revisando/mergeando PRs manualmente y sigue ejecutando manualmente `bash scripts/deploy-update.sh` en la VM.

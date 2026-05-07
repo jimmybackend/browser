@@ -1,0 +1,54 @@
+name: Manual pre-deploy validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Short reason for running this manual validation'
+        required: true
+        type: string
+      target_ref:
+        description: 'Branch or ref to validate'
+        required: true
+        default: 'main'
+        type: string
+
+jobs:
+  predeploy-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref }}
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql,mbstring,curl,zip,intl,gd,bcmath,soap
+
+      - name: Show manual run context
+        run: |
+          echo "Reason: ${{ inputs.reason }}"
+          echo "Target ref: ${{ inputs.target_ref }}"
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Repository validation
+        run: bash scripts/validate.sh
+
+      - name: Shell script syntax checks
+        run: |
+          bash -n scripts/deploy-check.sh
+          bash -n scripts/deploy-after-pull.sh
+          bash -n scripts/deploy-update.sh
+          bash -n scripts/crawler-cron-check.sh
+
+      - name: CLI smoke check
+        run: php bin/browser help

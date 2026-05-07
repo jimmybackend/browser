@@ -124,3 +124,21 @@ Escalar a revisión humana inmediata cuando ocurra cualquiera de estos casos:
 - Crawler detenido por más de un ciclo operativo.
 - Errores de permisos persistentes en `storage`.
 - Dudas sobre migraciones o posibles impactos en datos de producción.
+
+## Paso opcional pre-deploy (GitHub Actions)
+
+Antes de actualizar la VM, se puede ejecutar validación manual pre-deploy:
+
+1. Ir a **GitHub -> Actions -> Manual pre-deploy validation**.
+2. Click en **Run workflow**.
+3. Completar:
+   - `reason`: motivo corto de la ejecución.
+   - `target_ref`: rama/ref a validar (por defecto `main`).
+4. Esperar estado verde.
+
+Si pasa, continuar con despliegue manual en VM:
+
+```bash
+cd /var/www/browser
+bash scripts/deploy-update.sh
+```
