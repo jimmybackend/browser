@@ -115,3 +115,14 @@
 - [x] Normalizar paths/queries con espacios para evitar errores CURL por URL malformada, preservando segmentos ya codificados.
 - [x] Asegurar null-safety en `parseHtml()` para `title`, `description` y `language` antes de `mb_substr()`.
 - [x] Agregar pruebas PHPUnit unitarias sin red/DB para cubrir casos reales de normalización y null-safety.
+
+
+## Fase 12: Protección de rama `main` (documentación y checklist)
+
+- [x] Crear documentación `docs/BRANCH_PROTECTION.md` con reglas recomendadas para proteger `main`.
+- [x] Definir paso a paso manual en GitHub UI (`Settings -> Branches -> Add branch ruleset/rule -> main`).
+- [x] Dejar explícito que Codex crea PRs y el merge lo realiza Jimmy manualmente.
+- [x] Dejar explícito que no se habilita auto-merge todavía.
+- [x] Confirmar en documentación que producción y base de datos siguen bajo aprobación humana.
+- [x] Agregar checklist previo y posterior a activación de branch protection.
+- [x] Confirmar que esta fase no introduce cambios funcionales de código, migraciones ni credenciales.
