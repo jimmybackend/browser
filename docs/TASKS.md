@@ -203,3 +203,15 @@
 - [x] Agregar resumen por tipo aproximado de error para operación diaria.
 - [x] Actualizar `docs/OPERATIONS_RUNBOOK.md` y `docs/VALIDATION.md` con uso del comando.
 - [x] Confirmar que no se modifican migraciones, estructura de BD, `.env` ni Nginx.
+
+## Fase 20: Comandos CLI no interactivos para siembra del crawler
+
+- [x] Revisar SQL real previo (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`).
+- [x] Agregar comando `crawl:queue` en `Kernel::handle()` y `help`.
+- [x] Agregar comando `crawl:queue-file` en `Kernel::handle()` y `help`.
+- [x] Validar URL con la misma lógica segura existente (`normalizeSafeSeedUrl`).
+- [x] Rechazar URL vacía/ inválida, localhost, rangos privados/reservados y esquemas no HTTP/HTTPS.
+- [x] Crear jobs `queued` exclusivamente vía `CrawlJob::create()`.
+- [x] Limitar creación por ejecución en `crawl:queue-file` con `--limit`.
+- [x] Actualizar documentación operativa y de validación.
+- [x] Confirmar que no se ejecuta `crawl:run`, no se modifica `indexed_pages`, no se modifica `crawl_urls` y no hay migraciones nuevas.

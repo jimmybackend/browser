@@ -173,3 +173,21 @@ tail -n 200 storage/logs/crawler.log
 ```
 
 `crawl:errors` ayuda a separar errores históricos de fallos recientes (SSL, HTTP, malformed URL, `mb_substr/null`, robots/disallowed y otros).
+
+## Sembrar nuevas URLs
+
+Recomendación: empezar con pocos dominios confiables y monitorear resultados antes de ampliar volumen.
+
+Comandos:
+
+```bash
+php bin/browser crawl:queue --url=https://example.com --max-depth=1 --max-pages=10
+php bin/browser crawl:queue-file --file=storage/crawler-seeds.txt --max-depth=1 --max-pages=10 --limit=20
+```
+
+Después de sembrar, revisar:
+
+```bash
+php bin/browser index:status
+php bin/browser crawl:status
+```
