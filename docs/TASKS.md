@@ -105,3 +105,13 @@
 - [x] Evitar exposición de `session_id`, `session_token_hash`, contraseñas y tokens CSRF en metadata mostrada.
 - [x] Agregar pruebas PHPUnit mínimas sin DB real para existencia de controlador/vista y checks de no exposición de labels sensibles.
 - [x] Confirmar que no se modificó la estructura de `audit_logs`.
+
+## Fase 11: Hardening de normalización de URLs del crawler
+
+- [x] Revisar esquema SQL real previo (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`) sin cambios de BD.
+- [x] Corregir `CrawlerService::normalizeUrl()` para resolución segura de relativas (`/`, `?query`, rutas hermanas, carpetas).
+- [x] Mantener rechazo de esquemas inseguros (`javascript:`, `data:`, `file:`, `ftp:`) y fragmentos `#`.
+- [x] Evitar URLs corruptas observadas en datos reales (`pagina.php/otra.php`, `?lang=es/signup.php`).
+- [x] Normalizar paths/queries con espacios para evitar errores CURL por URL malformada, preservando segmentos ya codificados.
+- [x] Asegurar null-safety en `parseHtml()` para `title`, `description` y `language` antes de `mb_substr()`.
+- [x] Agregar pruebas PHPUnit unitarias sin red/DB para cubrir casos reales de normalización y null-safety.

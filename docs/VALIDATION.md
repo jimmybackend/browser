@@ -199,3 +199,22 @@ Pruebas automáticas agregadas (sin DB real):
 - `tests/AuditLogViewerFeatureTest.php` valida existencia de controlador y vista.
 - `tests/AuditLogViewerFeatureTest.php` valida presencia de `listRecent` en `AuditLog`.
 - `tests/AuditLogViewerFeatureTest.php` valida ausencia de labels sensibles en la vista de auditoría.
+
+## Validación específica de normalización de URLs del crawler
+
+Cambios cubiertos en esta iteración:
+
+- Se revisaron los SQL reales `database/migrations/001_initial_schema.sql` y `database/migrations/004_crawl_urls.sql` antes de modificar lógica del crawler.
+- `CrawlerService::normalizeUrl()` ahora resuelve correctamente URLs relativas root-relative y sibling-relative cuando la base termina en archivo o carpeta.
+- Se corrige resolución de query relativa (`?lang=en`) preservando la ruta base y reemplazando query, sin concatenaciones inválidas.
+- Se mantienen descartes de fragmentos y esquemas no permitidos (`javascript`, `data`, `file`, `ftp`).
+- Se agrega normalización de espacios en path/query para evitar `Error CURL: URL rejected: Malformed input to a URL function`, sin romper rutas ya codificadas.
+- `parseHtml()` ahora trata `title`, `description` y `language` de forma null-safe para no invocar `mb_substr()` con `null`.
+- No se realizaron cambios en migraciones, tablas ni columnas.
+
+Pruebas automáticas agregadas (sin red y sin DB real):
+
+- `tests/CrawlerServiceTest.php` valida resolución de casos reales reportados (`/signup.php`, `contact-us.php`, `?lang=en`) y evita patrones malformados.
+- `tests/CrawlerServiceTest.php` valida rechazo de fragmentos/esquemas inseguros.
+- `tests/CrawlerServiceTest.php` valida encoding seguro de espacios y preservación de segmentos ya codificados.
+- `tests/CrawlerServiceTest.php` valida null-safety de `parseHtml()` sin `<title>`, sin meta description y sin `lang`.
