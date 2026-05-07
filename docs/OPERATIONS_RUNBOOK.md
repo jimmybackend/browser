@@ -32,11 +32,15 @@ Ejecutar en `/var/www/browser`:
    ```bash
    php bin/browser index:status
    ```
-5. Estado de crawler con usuario real del cron:
+5. Diagnóstico de errores recientes del crawler:
+   ```bash
+   php bin/browser crawl:errors
+   ```
+6. Estado de crawler con usuario real del cron:
    ```bash
    sudo -u www-data php bin/browser crawl:status
    ```
-6. Revisar log reciente del crawler:
+7. Revisar log reciente del crawler:
    ```bash
    tail -n 100 storage/logs/crawler.log
    ```
@@ -155,3 +159,17 @@ Ante deploy fallido o incidente post-actualización:
    - `docs/ROLLBACK_VM.md`
 3. Mantener aprobación humana para rollback en producción y cualquier acción sobre base de datos.
 4. Priorizar revert de PR en GitHub + `bash scripts/deploy-update.sh` en VM como ruta recomendada.
+
+
+## Cuando el crawler no indexa páginas nuevas
+
+Ejecutar este bloque de diagnóstico (solo lectura):
+
+```bash
+php bin/browser index:status
+php bin/browser crawl:status
+php bin/browser crawl:errors
+tail -n 200 storage/logs/crawler.log
+```
+
+`crawl:errors` ayuda a separar errores históricos de fallos recientes (SSL, HTTP, malformed URL, `mb_substr/null`, robots/disallowed y otros).

@@ -36,6 +36,7 @@ final class Kernel
             'crawl:add' => $this->crawlAdd(),
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
+            'crawl:errors' => $this->crawlErrors(),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
             'auth:doctor' => $this->authDoctor(),
@@ -58,6 +59,7 @@ final class Kernel
         $this->line('  crawl:add     Crea un crawl job en estado queued');
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
+        $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -302,6 +304,114 @@ final class Kernel
         return 0;
     }
 
+
+    private function crawlErrors(): int
+    {
+        Env::load(BASE_PATH);
+
+        try {
+            $pdo = Database::connection();
+
+            $failedUrlsStmt = $pdo->prepare('SELECT url, http_status, error_message, updated_at FROM crawl_urls WHERE status = :status ORDER BY updated_at DESC, id DESC LIMIT 20');
+            $failedUrlsStmt->execute(['status' => 'failed']);
+            $failedUrls = $failedUrlsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $failedJobsStmt = $pdo->prepare('SELECT id, seed_url, error_message, created_at, finished_at FROM crawl_jobs WHERE status = :status ORDER BY created_at DESC, id DESC LIMIT 10');
+            $failedJobsStmt->execute(['status' => 'failed']);
+            $failedJobs = $failedJobsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $summary = [
+                'SSL' => 0,
+                'HTTP' => 0,
+                'malformed URL' => 0,
+                'mb_substr/null' => 0,
+                'robots/disallowed' => 0,
+                'otros' => 0,
+            ];
+
+            foreach ($failedUrls as $row) {
+                $summary[$this->classifyCrawlerError((string) ($row['error_message'] ?? ''), $row['http_status'] ?? null)]++;
+            }
+
+            foreach ($failedJobs as $row) {
+                $summary[$this->classifyCrawlerError((string) ($row['error_message'] ?? ''), null)]++;
+            }
+
+            $this->line('=== Crawl Errors ===');
+            $this->line('');
+            $this->line('=== Últimos 20 crawl_urls failed ===');
+
+            if ($failedUrls === []) {
+                $this->line('Sin errores recientes en crawl_urls.');
+            } else {
+                foreach ($failedUrls as $row) {
+                    $this->line(sprintf(
+                        '  url=%s | http_status=%s | error=%s | updated_at=%s',
+                        (string) ($row['url'] ?? '-'),
+                        (string) ($row['http_status'] ?? '-'),
+                        (string) ($row['error_message'] ?? '-'),
+                        (string) ($row['updated_at'] ?? '-')
+                    ));
+                }
+            }
+
+            $this->line('');
+            $this->line('=== Últimos 10 crawl_jobs failed ===');
+
+            if ($failedJobs === []) {
+                $this->line('Sin errores recientes en crawl_jobs.');
+            } else {
+                foreach ($failedJobs as $job) {
+                    $this->line(sprintf(
+                        '  #%d | seed_url=%s | error=%s | created_at=%s | finished_at=%s',
+                        (int) ($job['id'] ?? 0),
+                        (string) ($job['seed_url'] ?? '-'),
+                        (string) ($job['error_message'] ?? '-'),
+                        (string) ($job['created_at'] ?? '-'),
+                        (string) ($job['finished_at'] ?? '-')
+                    ));
+                }
+            }
+
+            $this->line('');
+            $this->line('=== Resumen por tipo aproximado ===');
+            foreach ($summary as $label => $total) {
+                $this->line(sprintf('  %s: %d', $label, $total));
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo obtener crawl:errors. Verifica conexión a base de datos.');
+            return 1;
+        }
+    }
+
+    private function classifyCrawlerError(string $errorMessage, mixed $httpStatus): string
+    {
+        $normalized = strtolower(trim($errorMessage));
+
+        if ($httpStatus !== null || str_contains($normalized, 'http_status')) {
+            return 'HTTP';
+        }
+
+        if (str_contains($normalized, 'ssl') || str_contains($normalized, 'certificate')) {
+            return 'SSL';
+        }
+
+        if (str_contains($normalized, 'malformed') || str_contains($normalized, 'url rejected') || str_contains($normalized, 'invalid url')) {
+            return 'malformed URL';
+        }
+
+        if (str_contains($normalized, 'mb_substr') || str_contains($normalized, 'null')) {
+            return 'mb_substr/null';
+        }
+
+        if (str_contains($normalized, 'robots') || str_contains($normalized, 'disallow')) {
+            return 'robots/disallowed';
+        }
+
+        return 'otros';
+    }
 
     private function indexStatus(): int
     {
