@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Browser\Controllers\AdminController;
+use Browser\Controllers\AuditLogController;
 use Browser\Controllers\AuthController;
 use Browser\Controllers\DashboardController;
 use Browser\Controllers\HomeController;
@@ -86,5 +87,6 @@ $router->get('/admin/users', [AdminController::class, 'users']);
 $router->get('/admin/users/show', [AdminController::class, 'showUser']);
 $router->get('/admin/users/roles', [AdminController::class, 'editUserRoles']);
 $router->post('/admin/users/roles', [AdminController::class, 'updateUserRoles']);
+$router->get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/');
