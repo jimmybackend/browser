@@ -25,6 +25,21 @@ final class CrawlJob
         return (int) Database::connection()->lastInsertId();
     }
 
+
+    public static function hasPendingForSeedUrl(string $seedUrl): bool
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT 1 FROM crawl_jobs WHERE seed_url = :seed_url AND status IN (:queued, :running) LIMIT 1'
+        );
+        $statement->execute([
+            'seed_url' => $seedUrl,
+            'queued' => 'queued',
+            'running' => 'running',
+        ]);
+
+        return (bool) $statement->fetchColumn();
+    }
+
     public static function queued(?int $limit = null): array
     {
         $sql = 'SELECT * FROM crawl_jobs WHERE status = :status ORDER BY id ASC';

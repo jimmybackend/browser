@@ -236,3 +236,12 @@
 - [x] Respetar `--limit` total entre múltiples sitemaps.
 - [x] Tratar `robots.txt` sin `Sitemap:` o con 404 como no fatal.
 - [x] Mantener que no se ejecuta `crawl:run` ni se escriben `crawl_urls`/`indexed_pages` directo.
+
+
+## Nota: deduplicación de jobs de siembra
+
+- `crawl:queue`, `crawl:queue-file`, `crawl:sitemap` y `crawl:robots-sitemaps` ahora omiten seeds duplicadas cuando ya existe un `crawl_jobs.seed_url` con estado `queued` o `running`.
+- Mensaje esperado por URL duplicada: `[SKIP] Job duplicado: URL`.
+- Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
+- El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
+- No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
