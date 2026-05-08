@@ -245,3 +245,12 @@
 - Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
 - El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
 - No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
+
+## Fase 23: Crawl budget/rate limit por dominio
+
+- [x] Agregar `CrawlRateLimiter` con cooldown conservador por dominio (15s).
+- [x] Integrar rate limit en `CrawlerService::runJob` para diferir URLs del mismo dominio en la misma corrida.
+- [x] Mantener URLs diferidas en estado `queued` (no `failed`) para siguiente ejecución de cron.
+- [x] Emitir salida informativa en `crawl:run` cuando existan URLs diferidas por rate limit.
+- [x] Mantener compatibilidad con `--limit` y `--job` en `crawl:run`.
+- [x] Sin cambios de migraciones ni esquema de BD.

@@ -31,14 +31,27 @@ final class CrawlUrl
 
     public static function nextQueued(int $jobId): ?array
     {
+        $rows = self::queuedByJob($jobId, 1);
+
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function queuedByJob(int $jobId, int $limit = 100): array
+    {
         $statement = Database::connection()->prepare(
-            'SELECT * FROM crawl_urls WHERE crawl_job_id = :crawl_job_id AND status = :status ORDER BY depth ASC, id ASC LIMIT 1'
+            'SELECT * FROM crawl_urls WHERE crawl_job_id = :crawl_job_id AND status = :status ORDER BY depth ASC, id ASC LIMIT :limit'
         );
-        $statement->execute(['crawl_job_id' => $jobId, 'status' => 'queued']);
+        $statement->bindValue(':crawl_job_id', $jobId, PDO::PARAM_INT);
+        $statement->bindValue(':status', 'queued', PDO::PARAM_STR);
+        $statement->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+        $statement->execute();
 
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-        return $row ?: null;
+        return is_array($rows) ? $rows : [];
     }
 
     public static function markRunning(int $id): void

@@ -292,6 +292,11 @@ final class Kernel
             try {
                 $stats = $crawler->runJob($job);
                 CrawlJob::markFinished($id, 'completed', (int) $stats['pages_found'], (int) $stats['pages_indexed']);
+                $skips = (int) ($stats['rate_limited_skips'] ?? 0);
+                if ($skips > 0) {
+                    $cooldown = (int) ($stats['rate_limit_cooldown_seconds'] ?? 0);
+                    $this->line("[INFO] crawl job #{$id} rate-limit: {$skips} URL(s) diferidas por dominio (cooldown {$cooldown}s).");
+                }
                 $this->line("[OK] crawl job #{$id} completed");
             } catch (Throwable $exception) {
                 CrawlJob::markFinished($id, 'failed', 0, 0, mb_substr($exception->getMessage(), 0, 500));

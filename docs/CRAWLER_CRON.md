@@ -169,3 +169,14 @@ Este comando solo crea jobs `queued` usando `CrawlJob::create()`. El procesamien
 - Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
 - El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
 - No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
+
+## Crawl budget por dominio (actualización)
+
+- `CrawlerService` aplica cooldown por dominio de **15 segundos** durante una ejecución de `crawl:run`.
+- Si todas las URLs pendientes del job están dentro de cooldown, se difieren para el siguiente cron y el comando imprime:
+  - `[INFO] ... rate-limit: N URL(s) diferidas por dominio (cooldown 15s)`.
+- Las URLs diferidas **no** se marcan como `failed`; permanecen `queued`.
+- Recomendaciones:
+  - Sitios propios: `--limit=1` cada 1-2 min, `max_pages` 25-50 según capacidad.
+  - Sitios externos: `--limit=1` cada 5 min, `max_pages` 10-25 para minimizar 429/403/503.
+  - Pausar/ajustar ante señales repetidas: HTTP 429, 403, 503 o timeouts.

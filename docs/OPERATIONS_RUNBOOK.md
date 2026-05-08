@@ -225,3 +225,13 @@ Notas operativas:
 - Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
 - El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
 - No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
+
+## Operación segura de crawl budget por dominio
+
+- Cooldown activo por dominio: 15s por ejecución.
+- Si aparecen mensajes `[INFO] ... rate-limit ... diferidas`, no es fallo: el cron reintentará en la siguiente corrida.
+- Ajuste operativo recomendado:
+  - Externos: mantener `crawl:run --limit=1` y jobs con `max_pages` bajo (10-25).
+  - Propios: puede subirse `max_pages` gradualmente (25-50) monitoreando errores.
+- Señales para pausar temporalmente si aumentan:
+  - 429, 403, 503, timeouts cURL.
