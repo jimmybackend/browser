@@ -13,6 +13,7 @@ use Browser\Services\CrawlDomainStatusService;
 use Browser\Services\CrawlDomainPolicyService;
 use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlSeedJobEnqueuer;
+use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -49,6 +50,7 @@ final class Kernel
             'crawl:errors' => $this->crawlErrors(),
             'crawl:domains' => $this->crawlDomains($argv),
             'crawl:domain-advice' => $this->crawlDomainAdvice($argv),
+            'crawl:report' => $this->crawlReport($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -79,6 +81,7 @@ final class Kernel
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
         $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
         $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
+        $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;

@@ -265,3 +265,22 @@ Usar esta vista para decidir si sembrar más URLs o pausar dominios con señales
 - **No pausa dominios automáticamente** y **no modifica** `storage/crawler/domain-policy.json`.
 - Muestra recomendaciones operativas y comando sugerido para pausa manual: `php bin/browser crawl:domain-policy pause --domain=... --reason="..."`.
 - Si el dominio ya está pausado, lo informa y no sugiere pausa duplicada.
+
+
+## Diagnóstico unificado del crawler (solo lectura)
+
+Antes de sembrar URLs, pausar dominios o esperar al siguiente ciclo de cron, ejecutar:
+
+```bash
+php bin/browser crawl:report
+```
+
+Variantes útiles:
+
+```bash
+php bin/browser crawl:report --domain=example.com
+php bin/browser crawl:report --limit=10
+php bin/browser crawl:report --json
+```
+
+Este comando es estrictamente de lectura: no ejecuta crawler, no siembra jobs y no cambia políticas de dominio.
