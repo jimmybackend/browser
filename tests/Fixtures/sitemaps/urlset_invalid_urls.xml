@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset>
+  <url><loc>https://example.com/ok</loc></url>
+  <url><loc>http://localhost/admin</loc></url>
+  <url><loc>http://127.0.0.1/private</loc></url>
+  <url><loc>ftp://example.com/file</loc></url>
+</urlset>

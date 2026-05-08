@@ -11,6 +11,7 @@ use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\SearchService;
+use Browser\Services\SitemapDiscoveryService;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -432,118 +433,34 @@ final class Kernel
             return 1;
         }
 
+        $service = new SitemapDiscoveryService();
+
         try {
-            $xmlBody = $this->fetchSitemapXml($sitemapUrl);
-            $parsed = $this->parseSitemapUrls($xmlBody);
+            $xmlBody = $service->fetchSitemapXml($sitemapUrl);
+            $parsed = $service->parseSitemapUrls($xmlBody);
 
-            $created = 0;
-            $skipped = 0;
-            foreach ($parsed['urls'] as $candidate) {
-                if ($created >= $limit) {
-                    break;
+            $result = $service->createJobsFromParsedSitemap(
+                $parsed,
+                $maxDepth,
+                $maxPages,
+                $limit,
+                fn (string $candidate): ?string => $this->normalizeSafeSeedUrl($candidate),
+                fn (string $url, int $depth, int $pages): int => CrawlJob::create($url, $depth, $pages),
+                function (string $message): void {
+                    $this->line($message);
                 }
-
-                $normalized = $this->normalizeSafeSeedUrl($candidate);
-                if ($normalized === null) {
-                    $skipped++;
-                    $this->line('[SKIP] URL inválida.');
-                    continue;
-                }
-
-                try {
-                    CrawlJob::create($normalized, $maxDepth, $maxPages);
-                    $created++;
-                } catch (Throwable $exception) {
-                    $skipped++;
-                    $this->line('[SKIP] URL inválida.');
-                }
-            }
+            );
 
             $this->line('[OK] Sitemap leído: ' . $sitemapUrl);
             $this->line('[OK] Tipo sitemap: ' . $parsed['type']);
             $this->line('[OK] URLs encontradas: ' . count($parsed['urls']));
-            $this->line('[OK] Jobs creados: ' . $created);
-            $this->line('[OK] URLs omitidas: ' . $skipped);
+            $this->line('[OK] Jobs creados: ' . $result['created']);
+            $this->line('[OK] URLs omitidas: ' . $result['skipped']);
             $this->line('[OK] Límite aplicado: ' . $limit);
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo procesar sitemap: ' . $exception->getMessage());
             return 1;
-        }
-    }
-
-    private function fetchSitemapXml(string $url): string
-    {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 3,
-            CURLOPT_CONNECTTIMEOUT => 8,
-            CURLOPT_TIMEOUT => 8,
-            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_USERAGENT => 'BrowserBot/0.1 sitemap-loader',
-            CURLOPT_HTTPHEADER => ['Accept: application/xml,text/xml'],
-        ]);
-
-        $response = curl_exec($ch);
-        if (!is_string($response)) {
-            throw new RuntimeException('Error CURL: ' . curl_error($ch));
-        }
-
-        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($status < 200 || $status >= 400) {
-            throw new RuntimeException('HTTP status inválido: ' . $status);
-        }
-
-        if (strlen($response) > 5 * 1024 * 1024) {
-            throw new RuntimeException('Sitemap excede tamaño máximo (5MB).');
-        }
-
-        return $response;
-    }
-
-    private function parseSitemapUrls(string $xmlBody): array
-    {
-        $previous = libxml_use_internal_errors(true);
-        try {
-            $xml = simplexml_load_string($xmlBody, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
-            if ($xml === false) {
-                throw new RuntimeException('XML inválido.');
-            }
-
-            $root = strtolower($xml->getName());
-            if ($root === 'urlset') {
-                $urls = [];
-                foreach ($xml->url as $urlNode) {
-                    $loc = trim((string) ($urlNode->loc ?? ''));
-                    if ($loc !== '') {
-                        $urls[] = $loc;
-                    }
-                }
-
-                return ['type' => 'urlset', 'urls' => array_values(array_unique($urls))];
-            }
-
-            if ($root === 'sitemapindex') {
-                $urls = [];
-                foreach ($xml->sitemap as $sitemapNode) {
-                    $loc = trim((string) ($sitemapNode->loc ?? ''));
-                    if ($loc !== '') {
-                        $urls[] = $loc;
-                    }
-                }
-
-                return ['type' => 'sitemapindex (direct loc only)', 'urls' => array_values(array_unique($urls))];
-            }
-
-            throw new RuntimeException('Root XML no soportado. Use urlset o sitemapindex.');
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previous);
         }
     }
 
