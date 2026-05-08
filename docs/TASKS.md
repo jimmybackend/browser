@@ -254,3 +254,15 @@
 - [x] Emitir salida informativa en `crawl:run` cuando existan URLs diferidas por rate limit.
 - [x] Mantener compatibilidad con `--limit` y `--job` en `crawl:run`.
 - [x] Sin cambios de migraciones ni esquema de BD.
+
+
+## Fase 23: Observabilidad CLI de crawler por dominio (solo lectura)
+
+- [x] Revisar SQL real previo (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`).
+- [x] Agregar comando `crawl:domains` en `Kernel::handle()` y `help`.
+- [x] Implementar servicio `CrawlDomainStatusService` con solo `SELECT` + prepared statements.
+- [x] Soportar opciones `--limit=20`, `--domain=example.com`, `--errors`.
+- [x] Mostrar mensaje claro cuando no hay datos de crawler por dominio.
+- [x] Agregar pruebas PHPUnit para resumen vacío, agrupación, filtro por dominio, errores recientes y comportamiento solo lectura.
+- [x] Actualizar documentación operativa/validación.
+- [x] Confirmar que no se modifican migraciones, esquema de BD, `.env` ni Nginx y que no se ejecuta crawler directamente.
