@@ -460,3 +460,5 @@ Criterios:
 - No ejecuta `crawl:run`.
 - Respeta `--limit`.
 - URLs inválidas se omiten con `[SKIP] URL inválida.`.
+- `sitemapindex` mantiene comportamiento actual: usa `loc` directo de cada `<sitemap>` sin fetch recursivo.
+- La suite PHPUnit cubre `urlset` válido, sobre-límite, XML inválido y URLs no permitidas usando fixtures locales (sin red real).

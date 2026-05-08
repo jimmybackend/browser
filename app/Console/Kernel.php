@@ -408,7 +408,7 @@ final class Kernel
         return 0;
     }
 
-    private function crawlSitemap(array $argv): int
+    protected function crawlSitemap(array $argv): int
     {
         Env::load(BASE_PATH);
 
@@ -451,7 +451,7 @@ final class Kernel
                 }
 
                 try {
-                    CrawlJob::create($normalized, $maxDepth, $maxPages);
+                    $this->createCrawlJob($normalized, $maxDepth, $maxPages);
                     $created++;
                 } catch (Throwable $exception) {
                     $skipped++;
@@ -472,7 +472,7 @@ final class Kernel
         }
     }
 
-    private function fetchSitemapXml(string $url): string
+    protected function fetchSitemapXml(string $url): string
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -506,11 +506,11 @@ final class Kernel
         return $response;
     }
 
-    private function parseSitemapUrls(string $xmlBody): array
+    protected function parseSitemapUrls(string $xmlBody): array
     {
         $previous = libxml_use_internal_errors(true);
         try {
-            $xml = simplexml_load_string($xmlBody, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            $xml = simplexml_load_string($xmlBody, 'SimpleXMLElement', $this->sitemapLibxmlOptions());
             if ($xml === false) {
                 throw new RuntimeException('XML inválido.');
             }
@@ -545,6 +545,16 @@ final class Kernel
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
         }
+    }
+
+    protected function sitemapLibxmlOptions(): int
+    {
+        return LIBXML_NONET | LIBXML_NOCDATA;
+    }
+
+    protected function createCrawlJob(string $url, int $maxDepth, int $maxPages): int
+    {
+        return CrawlJob::create($url, $maxDepth, $maxPages);
     }
 
     private function crawlStatus(): int
