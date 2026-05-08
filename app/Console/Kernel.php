@@ -9,6 +9,7 @@ use Browser\Core\Env;
 use Browser\Core\Session;
 use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
+use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -330,8 +331,15 @@ final class Kernel
         }
 
         try {
+            if (CrawlJob::hasPendingForSeedUrl($url)) {
+                $this->line('[SKIP] Job duplicado: ' . $url);
+                $this->line('[OK] Resumen: jobs creados=0, URLs inválidas=0, URLs duplicadas=1, errores controlados=0');
+                return 0;
+            }
+
             $jobId = CrawlJob::create($url, $maxDepth, $maxPages);
             $this->line("[OK] Job creado con ID {$jobId} para URL {$url}");
+            $this->line('[OK] Resumen: jobs creados=1, URLs inválidas=0, URLs duplicadas=0, errores controlados=0');
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo crear el job.');
@@ -379,36 +387,34 @@ final class Kernel
             return 1;
         }
 
-        $created = 0;
-        $skipped = 0;
-
+        $candidates = [];
         foreach ($lines as $line) {
             $candidate = trim((string) $line);
             if ($candidate === '' || str_starts_with($candidate, '#')) {
                 continue;
             }
-
-            if ($created >= $limit) {
-                break;
-            }
-
-            $url = $this->normalizeSafeSeedUrl($candidate);
-            if ($url === null) {
-                $skipped++;
-                $this->line('[SKIP] URL inválida.');
-                continue;
-            }
-
-            try {
-                CrawlJob::create($url, $maxDepth, $maxPages);
-                $created++;
-            } catch (Throwable $exception) {
-                $skipped++;
-                $this->line('[SKIP] URL inválida.');
-            }
+            $candidates[] = $candidate;
         }
 
-        $this->line("[OK] Resumen: jobs creados={$created}, URLs omitidas={$skipped}, archivo leído={$filePath}");
+        $enqueuer = new CrawlSeedJobEnqueuer();
+        $result = $enqueuer->enqueueMany(
+            $candidates,
+            $maxDepth,
+            $maxPages,
+            $limit,
+            fn (string $candidate): ?string => $this->normalizeSafeSeedUrl($candidate),
+            fn (string $url): bool => CrawlJob::hasPendingForSeedUrl($url),
+            fn (string $url, int $depth, int $pages): int => CrawlJob::create($url, $depth, $pages),
+            function (string $message): void {
+                $this->line($message);
+            }
+        );
+
+        $this->line('[OK] Resumen: jobs creados=' . $result['created']
+            . ', URLs inválidas=' . $result['invalid']
+            . ', URLs duplicadas=' . $result['duplicates']
+            . ', errores controlados=' . $result['errors']
+            . ', archivo leído=' . $filePath);
         return 0;
     }
 
@@ -448,7 +454,13 @@ final class Kernel
                 $maxPages,
                 $limit,
                 fn (string $candidate): ?string => $this->normalizeSafeSeedUrl($candidate),
-                fn (string $url, int $depth, int $pages): int => CrawlJob::create($url, $depth, $pages),
+                function (string $url, int $depth, int $pages): int {
+                    if (CrawlJob::hasPendingForSeedUrl($url)) {
+                        throw new RuntimeException('[DUPLICATE] ' . $url);
+                    }
+
+                    return CrawlJob::create($url, $depth, $pages);
+                },
                 function (string $message): void {
                     $this->line($message);
                 }
@@ -458,7 +470,9 @@ final class Kernel
             $this->line('[OK] Tipo sitemap: ' . $parsed['type']);
             $this->line('[OK] URLs encontradas: ' . count($parsed['urls']));
             $this->line('[OK] Jobs creados: ' . $result['created']);
-            $this->line('[OK] URLs omitidas: ' . $result['skipped']);
+            $this->line('[OK] URLs inválidas: ' . ($result['invalid'] ?? 0));
+            $this->line('[OK] URLs duplicadas: ' . ($result['duplicates'] ?? 0));
+            $this->line('[OK] errores controlados: ' . ($result['errors'] ?? 0));
             $this->line('[OK] Límite aplicado: ' . $limit);
             return 0;
         } catch (Throwable $exception) {
@@ -541,10 +555,20 @@ final class Kernel
                         $maxPages,
                         $remaining,
                         fn (string $candidate): ?string => $this->normalizeSafeSeedUrl($candidate),
-                        fn (string $url, int $depth, int $pages): int => CrawlJob::create($url, $depth, $pages)
+                        function (string $url, int $depth, int $pages): int {
+                            if (CrawlJob::hasPendingForSeedUrl($url)) {
+                                throw new RuntimeException('[DUPLICATE] ' . $url);
+                            }
+
+                            return CrawlJob::create($url, $depth, $pages);
+                        },
+                        function (string $message): void {
+                            $this->line($message);
+                        }
                     );
                     $created += (int) $result['created'];
-                    $skipped += (int) $result['skipped'];
+                    $skipped += (int) ($result['invalid'] ?? 0);
+                    $skipped += (int) ($result['duplicates'] ?? 0);
                 } catch (Throwable $exception) {
                     $errors++;
                 }

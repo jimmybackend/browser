@@ -216,3 +216,12 @@ Notas operativas:
 - Solo crea jobs en `crawl_jobs` usando `CrawlJob::create()`.
 - El cron mantiene la ejecución real con `crawl:run`.
 - No toca `.env`, no modifica Nginx, no despliega y no cambia esquema de BD.
+
+
+## Nota: deduplicación de jobs de siembra
+
+- `crawl:queue`, `crawl:queue-file`, `crawl:sitemap` y `crawl:robots-sitemaps` ahora omiten seeds duplicadas cuando ya existe un `crawl_jobs.seed_url` con estado `queued` o `running`.
+- Mensaje esperado por URL duplicada: `[SKIP] Job duplicado: URL`.
+- Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
+- El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
+- No se agregaron migraciones ni cambios de esquema de BD en esta mejora.

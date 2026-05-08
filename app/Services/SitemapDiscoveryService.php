@@ -105,7 +105,9 @@ final class SitemapDiscoveryService
         ?callable $logger = null
     ): array {
         $created = 0;
-        $skipped = 0;
+        $invalid = 0;
+        $duplicates = 0;
+        $errors = 0;
 
         foreach (($parsed['urls'] ?? []) as $candidate) {
             if ($created >= $limit) {
@@ -114,7 +116,7 @@ final class SitemapDiscoveryService
 
             $normalized = $normalizeUrl((string) $candidate);
             if (!is_string($normalized) || $normalized === '') {
-                $skipped++;
+                $invalid++;
                 if ($logger !== null) {
                     $logger('[SKIP] URL inválida.');
                 }
@@ -125,13 +127,30 @@ final class SitemapDiscoveryService
                 $createJob($normalized, $maxDepth, $maxPages);
                 $created++;
             } catch (Throwable $exception) {
-                $skipped++;
+                $message = (string) $exception->getMessage();
+                if (str_starts_with($message, '[DUPLICATE] ')) {
+                    $duplicates++;
+                    if ($logger !== null) {
+                        $logger('[SKIP] Job duplicado: ' . substr($message, 12));
+                    }
+                    continue;
+                }
+
+                $errors++;
                 if ($logger !== null) {
-                    $logger('[SKIP] URL inválida.');
+                    $logger('[SKIP] Error controlado al crear job.');
                 }
             }
         }
 
-        return ['created' => $created, 'skipped' => $skipped];
+        $skipped = $invalid + $duplicates + $errors;
+
+        return [
+            'created' => $created,
+            'skipped' => $skipped,
+            'invalid' => $invalid,
+            'duplicates' => $duplicates,
+            'errors' => $errors,
+        ];
     }
 }

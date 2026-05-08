@@ -160,3 +160,12 @@ Este comando solo crea jobs `queued` usando `CrawlJob::create()`. El procesamien
 - No ejecuta crawler directamente; el procesamiento real sigue en cron con `php bin/browser crawl:run`.
 - No escribe directo en `indexed_pages` ni `crawl_urls`.
 - Si `robots.txt` no existe (404) o no tiene `Sitemap:`, termina en modo no fatal con resumen claro.
+
+
+## Nota: deduplicación de jobs de siembra
+
+- `crawl:queue`, `crawl:queue-file`, `crawl:sitemap` y `crawl:robots-sitemaps` ahora omiten seeds duplicadas cuando ya existe un `crawl_jobs.seed_url` con estado `queued` o `running`.
+- Mensaje esperado por URL duplicada: `[SKIP] Job duplicado: URL`.
+- Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
+- El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
+- No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
