@@ -202,3 +202,17 @@ php bin/browser crawl:sitemap --url=https://example.com/sitemap.xml --max-depth=
 ```
 
 Recomendación operativa: empezar con `--limit` bajo (por ejemplo 10-20) y luego aumentar gradualmente según capacidad de la VM.
+
+## Siembra desde robots.txt (sin ejecutar crawler)
+
+Comando:
+
+```bash
+php bin/browser crawl:robots-sitemaps --url=https://example.com --max-depth=1 --max-pages=10 --limit=50
+```
+
+Notas operativas:
+
+- Solo crea jobs en `crawl_jobs` usando `CrawlJob::create()`.
+- El cron mantiene la ejecución real con `crawl:run`.
+- No toca `.env`, no modifica Nginx, no despliega y no cambia esquema de BD.

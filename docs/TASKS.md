@@ -226,3 +226,13 @@
 - [x] Respetar límite con `--limit` y omitir URLs inválidas.
 - [x] Actualizar documentación operativa/validación.
 - [x] Confirmar que no se modifica `crawl_urls`/`indexed_pages` directamente ni migraciones.
+
+## Fase 22: Descubrimiento de sitemaps desde robots.txt
+
+- [x] Agregar comando `crawl:robots-sitemaps` en `Kernel` y `help`.
+- [x] Normalizar `--url` a `/robots.txt` y aplicar validación segura de URL.
+- [x] Extraer líneas `Sitemap:` tolerando mayúsculas/minúsculas y espacios.
+- [x] Reutilizar `SitemapDiscoveryService` para parsear sitemaps y sembrar jobs.
+- [x] Respetar `--limit` total entre múltiples sitemaps.
+- [x] Tratar `robots.txt` sin `Sitemap:` o con 404 como no fatal.
+- [x] Mantener que no se ejecuta `crawl:run` ni se escriben `crawl_urls`/`indexed_pages` directo.

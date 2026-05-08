@@ -462,3 +462,20 @@ Criterios:
 - URLs inválidas se omiten con `[SKIP] URL inválida.`.
 - `sitemapindex` mantiene comportamiento actual: usa `loc` directo de cada `<sitemap>` sin fetch recursivo.
 - La suite PHPUnit cubre `urlset` válido, sobre-límite, XML inválido y URLs no permitidas usando fixtures locales (sin red real).
+
+## Validación específica: crawl:robots-sitemaps
+
+Comandos:
+
+```bash
+php bin/browser help
+php bin/browser crawl:robots-sitemaps --url=https://example.com --max-depth=1 --max-pages=10 --limit=50
+```
+
+Criterios:
+
+- El comando aparece en `help`.
+- Solo siembra jobs vía `CrawlJob::create()`.
+- No ejecuta crawler directamente.
+- Respeta `--limit` global entre sitemaps encontrados en `robots.txt`.
+- Si no hay `Sitemap:` o hay 404 de `robots.txt`, termina sin error fatal.
