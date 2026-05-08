@@ -10,6 +10,7 @@ use Browser\Core\Session;
 use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
 use Browser\Services\RobotsTxtService;
+use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
 use Browser\Services\SitemapDiscoveryService;
 use PDO;
@@ -38,6 +39,7 @@ final class Kernel
             'crawl:queue' => $this->crawlQueue($argv),
             'crawl:queue-file' => $this->crawlQueueFile($argv),
             'crawl:sitemap' => $this->crawlSitemap($argv),
+            'crawl:robots-sitemaps' => $this->crawlRobotsSitemaps($argv),
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
@@ -64,6 +66,7 @@ final class Kernel
         $this->line('  crawl:queue   Crea un crawl job queued (no interactivo)');
         $this->line('  crawl:queue-file Crea crawl jobs queued leyendo URLs de archivo');
         $this->line('  crawl:sitemap Crea crawl jobs queued leyendo sitemap XML');
+        $this->line('  crawl:robots-sitemaps Crea crawl jobs queued desde robots.txt -> Sitemap');
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
@@ -460,6 +463,101 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo procesar sitemap: ' . $exception->getMessage());
+            return 1;
+        }
+    }
+
+    private function crawlRobotsSitemaps(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $urlInput = $this->readOptionValue($argv, 'url');
+        if ($urlInput === null || trim($urlInput) === '') {
+            $this->line('[FAIL] --url es requerido.');
+            return 1;
+        }
+
+        $maxDepth = $this->parseIntOption($argv, 'max-depth', 1, 0, 5);
+        $maxPages = $this->parseIntOption($argv, 'max-pages', 10, 1, 100);
+        $limit = $this->parseIntOption($argv, 'limit', 50, 1, 1000);
+        if ($maxDepth === null || $maxPages === null || $limit === null) {
+            $this->line('[FAIL] Opciones inválidas. --max-depth(0-5), --max-pages(1-100), --limit(1-1000).');
+            return 1;
+        }
+
+        $robotsService = new RobotsTxtSitemapDiscoveryService();
+        $sitemapService = new SitemapDiscoveryService();
+        $robotsUrl = $robotsService->normalizeRobotsTxtUrl($urlInput);
+        if ($robotsUrl === null) {
+            $this->line('[FAIL] --url debe ser http/https válido.');
+            return 1;
+        }
+
+        $safeRobotsUrl = $this->normalizeSafeSeedUrl($robotsUrl);
+        if ($safeRobotsUrl === null) {
+            $this->line('[FAIL] URL de robots.txt inválida o bloqueada.');
+            return 1;
+        }
+
+        try {
+            $robotsResponse = $robotsService->fetchRobotsTxt($safeRobotsUrl);
+            if ($robotsResponse['status'] === 404) {
+                $this->line('[OK] robots.txt no existe (404). No fatal, sin jobs creados.');
+                return 0;
+            }
+            if ($robotsResponse['status'] < 200 || $robotsResponse['status'] >= 400) {
+                $this->line('[OK] robots.txt no disponible (HTTP ' . $robotsResponse['status'] . '). No fatal, sin jobs creados.');
+                return 0;
+            }
+
+            $parsedRobots = $robotsService->extractSitemaps($robotsResponse['body']);
+            $sitemaps = $parsedRobots['sitemaps'];
+            if ($sitemaps === []) {
+                $this->line('[OK] robots.txt sin líneas Sitemap:. No hay jobs para sembrar.');
+                return 0;
+            }
+
+            $created = 0;
+            $skipped = 0;
+            $errors = 0;
+            foreach ($sitemaps as $sitemapCandidate) {
+                if ($created >= $limit) {
+                    break;
+                }
+
+                $safeSitemapUrl = $this->normalizeSafeSeedUrl($sitemapCandidate);
+                if ($safeSitemapUrl === null) {
+                    $skipped++;
+                    continue;
+                }
+
+                try {
+                    $xmlBody = $sitemapService->fetchSitemapXml($safeSitemapUrl);
+                    $parsed = $sitemapService->parseSitemapUrls($xmlBody);
+                    $remaining = max(0, $limit - $created);
+                    $result = $sitemapService->createJobsFromParsedSitemap(
+                        $parsed,
+                        $maxDepth,
+                        $maxPages,
+                        $remaining,
+                        fn (string $candidate): ?string => $this->normalizeSafeSeedUrl($candidate),
+                        fn (string $url, int $depth, int $pages): int => CrawlJob::create($url, $depth, $pages)
+                    );
+                    $created += (int) $result['created'];
+                    $skipped += (int) $result['skipped'];
+                } catch (Throwable $exception) {
+                    $errors++;
+                }
+            }
+
+            $this->line('[OK] robots URL leída: ' . $safeRobotsUrl);
+            $this->line('[OK] sitemaps encontrados: ' . count($sitemaps));
+            $this->line('[OK] jobs creados: ' . $created);
+            $this->line('[OK] URLs omitidas: ' . $skipped);
+            $this->line('[OK] errores controlados: ' . $errors);
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo procesar robots.txt: ' . $exception->getMessage());
             return 1;
         }
     }

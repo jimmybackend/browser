@@ -152,3 +152,11 @@ php bin/browser crawl:sitemap --url=https://example.com/sitemap.xml --max-depth=
 ```
 
 Este comando solo crea jobs `queued` usando `CrawlJob::create()`. El procesamiento sigue estando a cargo del cron con `php bin/browser crawl:run --limit=1` cada 5 minutos.
+
+## Nuevo comando: crawl:robots-sitemaps
+
+- `php bin/browser crawl:robots-sitemaps --url=https://example.com --max-depth=1 --max-pages=10 --limit=50`
+- Lee `robots.txt`, extrae líneas `Sitemap:` y **solo siembra jobs** en `crawl_jobs` vía `CrawlJob::create()`.
+- No ejecuta crawler directamente; el procesamiento real sigue en cron con `php bin/browser crawl:run`.
+- No escribe directo en `indexed_pages` ni `crawl_urls`.
+- Si `robots.txt` no existe (404) o no tiene `Sitemap:`, termina en modo no fatal con resumen claro.
