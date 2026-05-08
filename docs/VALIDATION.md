@@ -534,3 +534,25 @@ php bin/browser crawl:domains --errors
 - **No pausa dominios automáticamente** y **no modifica** `storage/crawler/domain-policy.json`.
 - Muestra recomendaciones operativas y comando sugerido para pausa manual: `php bin/browser crawl:domain-policy pause --domain=... --reason="..."`.
 - Si el dominio ya está pausado, lo informa y no sugiere pausa duplicada.
+
+
+## Validación específica: crawl:report (solo lectura)
+
+Comandos:
+
+```bash
+php bin/browser help
+php bin/browser crawl:report
+php bin/browser crawl:report --domain=example.com --limit=10
+php bin/browser crawl:report --json
+```
+
+Criterios:
+
+- aparece en `help`;
+- devuelve resumen estable en texto y JSON;
+- termina con exit code `0` aun sin datos;
+- no ejecuta `crawl:run`;
+- no siembra jobs;
+- no modifica `storage/crawler/domain-policy.json`;
+- usa consultas de solo lectura para BD.

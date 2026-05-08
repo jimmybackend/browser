@@ -13,6 +13,7 @@ use Browser\Services\CrawlDomainStatusService;
 use Browser\Services\CrawlDomainPolicyService;
 use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlSeedJobEnqueuer;
+use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -49,6 +50,7 @@ final class Kernel
             'crawl:errors' => $this->crawlErrors(),
             'crawl:domains' => $this->crawlDomains($argv),
             'crawl:domain-advice' => $this->crawlDomainAdvice($argv),
+            'crawl:report' => $this->crawlReport($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -79,6 +81,7 @@ final class Kernel
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
         $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
         $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
+        $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -890,6 +893,122 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo obtener crawl:domain-advice. Verifica conexión a base de datos.');
+            return 1;
+        }
+    }
+
+    private function crawlReport(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $limit = $this->parseIntOption($argv, 'limit', 10, 1, 200);
+        if ($limit === null) {
+            $this->line('[FAIL] --limit debe ser entero entre 1 y 200.');
+            return 1;
+        }
+
+        $domain = $this->readOptionValue($argv, 'domain');
+        if ($domain !== null) {
+            $domain = strtolower(trim($domain));
+            if ($domain === '') {
+                $this->line('[FAIL] --domain no puede estar vacío.');
+                return 1;
+            }
+        }
+
+        $jsonMode = in_array('--json', $argv, true);
+
+        try {
+            $pdo = Database::connection();
+            $policyService = $this->buildCrawlDomainPolicyService();
+            if ($policyService->getLastWarning() !== null) {
+                $this->line('[WARN] ' . $policyService->getLastWarning());
+            }
+
+            $reportService = new CrawlOperationalReportService(
+                $pdo,
+                new CrawlDomainStatusService($pdo, $policyService),
+                new CrawlDomainAdviceService($pdo, $policyService),
+                $policyService
+            );
+
+            $report = $reportService->build($domain, $limit);
+
+            if ($jsonMode) {
+                $json = json_encode([
+                    'jobs' => $report['jobs'] ?? [],
+                    'urls' => $report['urls'] ?? [],
+                    'indexed_pages' => $report['indexed_pages'] ?? ['total' => 0],
+                    'paused_domains' => $report['paused_domains'] ?? [],
+                    'domain_advice' => $report['domain_advice'] ?? [],
+                    'recent_errors' => $report['recent_errors'] ?? [],
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+                $this->line(is_string($json) ? $json : '{}');
+                return 0;
+            }
+
+            $this->line('Crawler report');
+            $this->line('');
+
+            $this->line('Jobs:');
+            foreach ((array) ($report['jobs'] ?? []) as $status => $count) {
+                $this->line(sprintf('- %s: %d', (string) $status, (int) $count));
+            }
+
+            $this->line('');
+            $this->line('URLs:');
+            foreach ((array) ($report['urls'] ?? []) as $status => $count) {
+                $this->line(sprintf('- %s: %d', (string) $status, (int) $count));
+            }
+
+            $this->line('');
+            $this->line('Indexed pages:');
+            $this->line(sprintf('- total: %d', (int) (($report['indexed_pages']['total'] ?? 0))));
+
+            $this->line('');
+            $this->line('Paused domains:');
+            foreach ((array) ($report['paused_domains'] ?? []) as $item) {
+                $this->line(sprintf(
+                    '- %s | reason=%s',
+                    (string) ($item['domain'] ?? '-'),
+                    (string) ($item['reason'] ?? '-')
+                ));
+            }
+
+            $this->line('');
+            $this->line('Domains needing attention:');
+            foreach ((array) ($report['domain_advice'] ?? []) as $item) {
+                $signals = (array) ($item['signals'] ?? []);
+                arsort($signals);
+                $dominant = (string) (array_key_first($signals) ?? '-');
+                $this->line(sprintf(
+                    '- %s | signal=%s | suggested=%s',
+                    (string) ($item['domain'] ?? '-'),
+                    $dominant,
+                    (string) ($item['suggested_command'] ?? 'n/a')
+                ));
+            }
+
+            $this->line('');
+            $this->line('Recent errors:');
+            foreach ((array) ($report['recent_errors'] ?? []) as $item) {
+                $this->line(sprintf(
+                    '- %s | http=%s | err=%s',
+                    (string) ($item['domain'] ?? '-'),
+                    (string) ($item['http_status'] ?? '-'),
+                    (string) ($item['error_message'] ?? '-')
+                ));
+            }
+
+            if (!((bool) ($report['has_data'] ?? false))) {
+                $this->line('');
+                $this->line('No hay datos de crawler todavía.');
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] Error generando reporte operativo de crawler.');
             return 1;
         }
     }

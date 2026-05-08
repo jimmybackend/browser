@@ -284,3 +284,13 @@
 - **No pausa dominios automáticamente** y **no modifica** `storage/crawler/domain-policy.json`.
 - Muestra recomendaciones operativas y comando sugerido para pausa manual: `php bin/browser crawl:domain-policy pause --domain=... --reason="..."`.
 - Si el dominio ya está pausado, lo informa y no sugiere pausa duplicada.
+
+
+## Fase 24: Reporte operativo unificado del crawler (solo lectura)
+
+- [x] Agregar comando `crawl:report` en `Kernel` y `help`.
+- [x] Implementar `CrawlOperationalReportService` con agregaciones de solo lectura (`SELECT`).
+- [x] Incluir resumen de jobs, URLs, total de indexed pages, dominios en cola, dominios pausados, recomendaciones y errores recientes.
+- [x] Soportar `--domain`, `--limit` y `--json`.
+- [x] Mantener comportamiento no destructivo: sin `crawl:run`, sin siembra de jobs, sin pausa automática, sin cambios en `domain-policy.json`.
+- [x] Agregar pruebas PHPUnit para reporte vacío, agregaciones y contrato de solo lectura.

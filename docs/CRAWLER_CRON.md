@@ -220,3 +220,21 @@ El procesamiento real del crawler sigue siendo exclusivo del cron con `php bin/b
 - **No pausa dominios automáticamente** y **no modifica** `storage/crawler/domain-policy.json`.
 - Muestra recomendaciones operativas y comando sugerido para pausa manual: `php bin/browser crawl:domain-policy pause --domain=... --reason="..."`.
 - Si el dominio ya está pausado, lo informa y no sugiere pausa duplicada.
+
+
+## Reporte operativo de solo lectura
+
+Usa `php bin/browser crawl:report` para diagnóstico consolidado (jobs, URLs, indexación, dominios pausados, recomendaciones y errores recientes).
+
+- `crawl:report` **no ejecuta** `crawl:run`.
+- `crawl:report` **no siembra** jobs.
+- `crawl:report` **no pausa** ni reactiva dominios.
+- `crawl:report` **no modifica** `storage/crawler/domain-policy.json`.
+
+Opciones:
+
+- `php bin/browser crawl:report --domain=example.com`
+- `php bin/browser crawl:report --limit=10`
+- `php bin/browser crawl:report --json`
+
+El procesamiento real sigue siendo exclusivo de cron con `php bin/browser crawl:run --limit=1`.
