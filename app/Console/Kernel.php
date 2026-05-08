@@ -36,6 +36,7 @@ final class Kernel
             'crawl:add' => $this->crawlAdd(),
             'crawl:queue' => $this->crawlQueue($argv),
             'crawl:queue-file' => $this->crawlQueueFile($argv),
+            'crawl:sitemap' => $this->crawlSitemap($argv),
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
@@ -61,6 +62,7 @@ final class Kernel
         $this->line('  crawl:add     Crea un crawl job en estado queued');
         $this->line('  crawl:queue   Crea un crawl job queued (no interactivo)');
         $this->line('  crawl:queue-file Crea crawl jobs queued leyendo URLs de archivo');
+        $this->line('  crawl:sitemap Crea crawl jobs queued leyendo sitemap XML');
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
@@ -404,6 +406,145 @@ final class Kernel
 
         $this->line("[OK] Resumen: jobs creados={$created}, URLs omitidas={$skipped}, archivo leído={$filePath}");
         return 0;
+    }
+
+    private function crawlSitemap(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $sitemapInput = $this->readOptionValue($argv, 'url');
+        if ($sitemapInput === null || trim($sitemapInput) === '') {
+            $this->line('[FAIL] --url es requerido.');
+            return 1;
+        }
+
+        $sitemapUrl = $this->normalizeSafeSeedUrl($sitemapInput);
+        if ($sitemapUrl === null) {
+            $this->line('[FAIL] URL de sitemap inválida o bloqueada.');
+            return 1;
+        }
+
+        $maxDepth = $this->parseIntOption($argv, 'max-depth', 1, 0, 5);
+        $maxPages = $this->parseIntOption($argv, 'max-pages', 10, 1, 100);
+        $limit = $this->parseIntOption($argv, 'limit', 50, 1, 1000);
+        if ($maxDepth === null || $maxPages === null || $limit === null) {
+            $this->line('[FAIL] Opciones inválidas. --max-depth(0-5), --max-pages(1-100), --limit(1-1000).');
+            return 1;
+        }
+
+        try {
+            $xmlBody = $this->fetchSitemapXml($sitemapUrl);
+            $parsed = $this->parseSitemapUrls($xmlBody);
+
+            $created = 0;
+            $skipped = 0;
+            foreach ($parsed['urls'] as $candidate) {
+                if ($created >= $limit) {
+                    break;
+                }
+
+                $normalized = $this->normalizeSafeSeedUrl($candidate);
+                if ($normalized === null) {
+                    $skipped++;
+                    $this->line('[SKIP] URL inválida.');
+                    continue;
+                }
+
+                try {
+                    CrawlJob::create($normalized, $maxDepth, $maxPages);
+                    $created++;
+                } catch (Throwable $exception) {
+                    $skipped++;
+                    $this->line('[SKIP] URL inválida.');
+                }
+            }
+
+            $this->line('[OK] Sitemap leído: ' . $sitemapUrl);
+            $this->line('[OK] Tipo sitemap: ' . $parsed['type']);
+            $this->line('[OK] URLs encontradas: ' . count($parsed['urls']));
+            $this->line('[OK] Jobs creados: ' . $created);
+            $this->line('[OK] URLs omitidas: ' . $skipped);
+            $this->line('[OK] Límite aplicado: ' . $limit);
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo procesar sitemap: ' . $exception->getMessage());
+            return 1;
+        }
+    }
+
+    private function fetchSitemapXml(string $url): string
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_USERAGENT => 'BrowserBot/0.1 sitemap-loader',
+            CURLOPT_HTTPHEADER => ['Accept: application/xml,text/xml'],
+        ]);
+
+        $response = curl_exec($ch);
+        if (!is_string($response)) {
+            throw new RuntimeException('Error CURL: ' . curl_error($ch));
+        }
+
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($status < 200 || $status >= 400) {
+            throw new RuntimeException('HTTP status inválido: ' . $status);
+        }
+
+        if (strlen($response) > 5 * 1024 * 1024) {
+            throw new RuntimeException('Sitemap excede tamaño máximo (5MB).');
+        }
+
+        return $response;
+    }
+
+    private function parseSitemapUrls(string $xmlBody): array
+    {
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $xml = simplexml_load_string($xmlBody, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            if ($xml === false) {
+                throw new RuntimeException('XML inválido.');
+            }
+
+            $root = strtolower($xml->getName());
+            if ($root === 'urlset') {
+                $urls = [];
+                foreach ($xml->url as $urlNode) {
+                    $loc = trim((string) ($urlNode->loc ?? ''));
+                    if ($loc !== '') {
+                        $urls[] = $loc;
+                    }
+                }
+
+                return ['type' => 'urlset', 'urls' => array_values(array_unique($urls))];
+            }
+
+            if ($root === 'sitemapindex') {
+                $urls = [];
+                foreach ($xml->sitemap as $sitemapNode) {
+                    $loc = trim((string) ($sitemapNode->loc ?? ''));
+                    if ($loc !== '') {
+                        $urls[] = $loc;
+                    }
+                }
+
+                return ['type' => 'sitemapindex (direct loc only)', 'urls' => array_values(array_unique($urls))];
+            }
+
+            throw new RuntimeException('Root XML no soportado. Use urlset o sitemapindex.');
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
     }
 
     private function crawlStatus(): int

@@ -191,3 +191,14 @@ Después de sembrar, revisar:
 php bin/browser index:status
 php bin/browser crawl:status
 ```
+
+
+## Sembrar desde sitemap
+
+Para cargar múltiples URLs desde un sitemap XML en cola:
+
+```bash
+php bin/browser crawl:sitemap --url=https://example.com/sitemap.xml --max-depth=1 --max-pages=10 --limit=20
+```
+
+Recomendación operativa: empezar con `--limit` bajo (por ejemplo 10-20) y luego aumentar gradualmente según capacidad de la VM.

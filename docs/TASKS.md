@@ -215,3 +215,14 @@
 - [x] Limitar creación por ejecución en `crawl:queue-file` con `--limit`.
 - [x] Actualizar documentación operativa y de validación.
 - [x] Confirmar que no se ejecuta `crawl:run`, no se modifica `indexed_pages`, no se modifica `crawl_urls` y no hay migraciones nuevas.
+
+
+## Fase 21: Sitemap discovery para siembra de crawler
+
+- [x] Revisar SQL real previo (`database/migrations/001_initial_schema.sql`, `database/migrations/004_crawl_urls.sql`).
+- [x] Agregar comando `crawl:sitemap` en `Kernel::handle()` y `help`.
+- [x] Parsear `urlset` y `sitemapindex` básico en modo seguro (sin XXE).
+- [x] Crear jobs `queued` exclusivamente vía `CrawlJob::create()`.
+- [x] Respetar límite con `--limit` y omitir URLs inválidas.
+- [x] Actualizar documentación operativa/validación.
+- [x] Confirmar que no se modifica `crawl_urls`/`indexed_pages` directamente ni migraciones.
