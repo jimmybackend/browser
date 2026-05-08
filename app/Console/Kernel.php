@@ -11,6 +11,7 @@ use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
 use Browser\Services\CrawlDomainStatusService;
 use Browser\Services\CrawlDomainPolicyService;
+use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
@@ -47,6 +48,7 @@ final class Kernel
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
             'crawl:domains' => $this->crawlDomains($argv),
+            'crawl:domain-advice' => $this->crawlDomainAdvice($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -76,6 +78,7 @@ final class Kernel
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
         $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
+        $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -819,6 +822,74 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo obtener crawl:domains. Verifica conexión a base de datos.');
+            return 1;
+        }
+    }
+
+
+    private function crawlDomainAdvice(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $threshold = $this->parseIntOption($argv, 'threshold', 5, 1, 100);
+        if ($threshold === null) {
+            $this->line('[FAIL] --threshold debe ser entero entre 1 y 100.');
+            return 1;
+        }
+
+        $limit = $this->parseIntOption($argv, 'limit', 20, 1, 200);
+        if ($limit === null) {
+            $this->line('[FAIL] --limit debe ser entero entre 1 y 200.');
+            return 1;
+        }
+
+        $domain = $this->readOptionValue($argv, 'domain');
+        if ($domain !== null) {
+            $domain = strtolower(trim($domain));
+            if ($domain === '') {
+                $this->line('[FAIL] --domain no puede estar vacío.');
+                return 1;
+            }
+        }
+
+        try {
+            $policyService = $this->buildCrawlDomainPolicyService();
+            if ($policyService->getLastWarning() !== null) { $this->line('[WARN] ' . $policyService->getLastWarning()); }
+
+            $service = new CrawlDomainAdviceService(Database::connection(), $policyService);
+            $rows = $service->recommend($threshold, $limit, $domain);
+
+            if ($rows === []) {
+                $this->line('No hay dominios candidatos a pausa con el umbral actual.');
+                return 0;
+            }
+
+            foreach ($rows as $row) {
+                $signals = $row['signals'] ?? [];
+                $signalText = is_array($signals) ? json_encode($signals, JSON_UNESCAPED_SLASHES) : '{}';
+                $this->line(sprintf(
+                    'domain=%s | paused=%s | errores_relevantes=%d | senales=%s',
+                    (string) ($row['domain'] ?? '-'),
+                    ((bool) ($row['paused'] ?? false)) ? 'true' : 'false',
+                    (int) ($row['error_count'] ?? 0),
+                    is_string($signalText) ? $signalText : '{}'
+                ));
+                $this->line('  recomendacion: ' . (string) ($row['recommendation'] ?? '-'));
+
+                if ((bool) ($row['paused'] ?? false)) {
+                    $this->line('  sugerencia: dominio ya pausado, no se sugiere pausa duplicada.');
+                    continue;
+                }
+
+                $suggested = (string) ($row['suggested_command'] ?? '');
+                if ($suggested !== '') {
+                    $this->line('  sugerencia: ' . $suggested);
+                }
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo obtener crawl:domain-advice. Verifica conexión a base de datos.');
             return 1;
         }
     }

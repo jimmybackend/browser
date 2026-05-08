@@ -256,3 +256,12 @@ Usar esta vista para decidir si sembrar más URLs o pausar dominios con señales
 - `crawl:run` difiere URLs de dominios pausados sin marcarlas `failed`; permanecen `queued`.
 - `crawl:domains` muestra `paused=true/false` por dominio.
 - El procesamiento real sigue siendo por cron con `php bin/browser crawl:run --limit=1`.
+
+
+## crawl:domain-advice (solo lectura)
+
+- Comando: `php bin/browser crawl:domain-advice [--limit=20] [--domain=example.com] [--threshold=5]`.
+- Analiza señales recientes por dominio (`429`, `403`, `503`, `timeouts`, `robots/disallow`, errores genéricos) usando solo consultas `SELECT`.
+- **No pausa dominios automáticamente** y **no modifica** `storage/crawler/domain-policy.json`.
+- Muestra recomendaciones operativas y comando sugerido para pausa manual: `php bin/browser crawl:domain-policy pause --domain=... --reason="..."`.
+- Si el dominio ya está pausado, lo informa y no sugiere pausa duplicada.
