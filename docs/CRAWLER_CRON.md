@@ -141,3 +141,14 @@ Flujo recomendado:
 
 1. Sembrar jobs con `crawl:queue` o `crawl:queue-file`.
 2. Dejar que el cron (cada 5 minutos) procese la cola con `crawl:run --limit=1`.
+
+
+## Siembra desde sitemap.xml
+
+También puedes sembrar jobs desde un sitemap sin ejecutar el crawler directamente:
+
+```bash
+php bin/browser crawl:sitemap --url=https://example.com/sitemap.xml --max-depth=1 --max-pages=10 --limit=50
+```
+
+Este comando solo crea jobs `queued` usando `CrawlJob::create()`. El procesamiento sigue estando a cargo del cron con `php bin/browser crawl:run --limit=1` cada 5 minutos.

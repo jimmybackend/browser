@@ -442,3 +442,21 @@ Criterios:
 - Se crean jobs en estado `queued` vía `CrawlJob::create()`.
 - URLs inválidas se omiten con `[SKIP] URL inválida.`.
 - No se ejecuta `crawl:run` desde comandos de siembra.
+
+
+## Validación específica: siembra desde sitemap
+
+Validación manual recomendada:
+
+```bash
+php bin/browser help
+php bin/browser crawl:sitemap --url=https://example.com/sitemap.xml --max-depth=1 --max-pages=10 --limit=5
+```
+
+Criterios:
+
+- `crawl:sitemap` aparece en `help`.
+- El comando crea jobs en estado `queued` vía `CrawlJob::create()`.
+- No ejecuta `crawl:run`.
+- Respeta `--limit`.
+- URLs inválidas se omiten con `[SKIP] URL inválida.`.
