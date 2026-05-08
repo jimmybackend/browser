@@ -202,3 +202,12 @@ Señales para pausar un dominio:
 - bloqueos por `robots.txt` (disallow)
 
 El procesamiento real del crawler sigue siendo exclusivo del cron con `php bin/browser crawl:run --limit=1`.
+
+
+## Control manual de dominio pausado
+
+- Comando operativo: `php bin/browser crawl:domain-policy <list|pause|resume|status>`.
+- Persiste políticas en `storage/crawler/domain-policy.json` (se crea solo en `pause`/`resume`).
+- `crawl:run` difiere URLs de dominios pausados sin marcarlas `failed`; permanecen `queued`.
+- `crawl:domains` muestra `paused=true/false` por dominio.
+- El procesamiento real sigue siendo por cron con `php bin/browser crawl:run --limit=1`.

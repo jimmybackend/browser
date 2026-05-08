@@ -8,7 +8,7 @@ use PDO;
 
 final class CrawlDomainStatusService
 {
-    public function __construct(private readonly ?PDO $pdo = null)
+    public function __construct(private readonly ?PDO $pdo = null, private readonly ?CrawlDomainPolicyService $domainPolicy = null)
     {
     }
 
@@ -47,6 +47,7 @@ final class CrawlDomainStatusService
                 'last_created_at' => $row['last_created_at'] ?? null,
                 'last_updated_at' => $row['last_updated_at'] ?? null,
                 'recent_errors' => $errors[$domainName] ?? [],
+                'paused' => $this->domainPolicy?->isPaused($domainName) ?? false,
             ];
         }
 

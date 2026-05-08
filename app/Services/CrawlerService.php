@@ -10,6 +10,7 @@ use Browser\Models\IndexedPage;
 use DOMDocument;
 use DOMXPath;
 use Throwable;
+use Browser\Services\CrawlDomainPolicyService;
 
 final class CrawlerService
 {
@@ -18,7 +19,8 @@ final class CrawlerService
 
     public function __construct(
         private readonly RobotsTxtService $robotsTxt,
-        private readonly CrawlRateLimiter $rateLimiter = new CrawlRateLimiter()
+        private readonly CrawlRateLimiter $rateLimiter = new CrawlRateLimiter(),
+        private readonly ?CrawlDomainPolicyService $domainPolicy = null
     ) {
     }
 
@@ -40,6 +42,7 @@ final class CrawlerService
 
         $indexed = 0;
         $rateLimitedSkips = 0;
+        $pausedDomainSkips = 0;
 
         while ($indexed < $maxPages) {
             $queued = CrawlUrl::queuedByJob($jobId, 100);
@@ -50,6 +53,11 @@ final class CrawlerService
             $next = null;
             foreach ($queued as $candidate) {
                 $candidateDomain = strtolower((string) ($candidate['domain'] ?? ''));
+                if ($candidateDomain !== '' && $this->domainPolicy?->isPaused($candidateDomain) === true) {
+                    $pausedDomainSkips++;
+                    continue;
+                }
+
                 if ($this->rateLimiter->canProcessDomain($candidateDomain)) {
                     $next = $candidate;
                     break;
@@ -57,7 +65,18 @@ final class CrawlerService
             }
 
             if ($next === null) {
-                $rateLimitedSkips += count($queued);
+                $allPaused = true;
+                foreach ($queued as $candidate) {
+                    $candidateDomain = strtolower((string) ($candidate['domain'] ?? ''));
+                    if ($candidateDomain === '' || $this->domainPolicy?->isPaused($candidateDomain) !== true) {
+                        $allPaused = false;
+                        break;
+                    }
+                }
+
+                if (!$allPaused) {
+                    $rateLimitedSkips += count($queued);
+                }
                 break;
             }
 
@@ -114,6 +133,7 @@ final class CrawlerService
             'pages_indexed' => $indexed,
             'rate_limited_skips' => $rateLimitedSkips,
             'rate_limit_cooldown_seconds' => CrawlRateLimiter::cooldownSeconds(),
+            'paused_domain_skips' => $pausedDomainSkips,
         ];
     }
 

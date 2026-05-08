@@ -10,6 +10,7 @@ use Browser\Core\Session;
 use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
 use Browser\Services\CrawlDomainStatusService;
+use Browser\Services\CrawlDomainPolicyService;
 use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
@@ -46,6 +47,7 @@ final class Kernel
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
             'crawl:domains' => $this->crawlDomains($argv),
+            'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
             'auth:doctor' => $this->authDoctor(),
@@ -268,6 +270,63 @@ final class Kernel
         }
     }
 
+
+    private function crawlDomainPolicy(array $argv): int
+    {
+        Env::load(BASE_PATH);
+        $action = $argv[2] ?? 'list';
+        $service = $this->buildCrawlDomainPolicyService();
+
+        if ($service->getLastWarning() !== null) {
+            $this->line('[WARN] ' . $service->getLastWarning());
+        }
+
+        try {
+            if ($action === 'list') {
+                $rows = $service->all();
+                if ($rows === []) { $this->line('Sin dominios pausados.'); return 0; }
+                foreach ($rows as $row) {
+                    if (($row['paused'] ?? false) !== true) { continue; }
+                    $this->line(sprintf('domain=%s | paused=true | reason=%s | paused_at=%s', (string)($row['domain']??'-'), (string)($row['reason']??'-'), (string)($row['paused_at']??'-')));
+                }
+                return 0;
+            }
+
+            $domain = $this->readOptionValue($argv, 'domain');
+            if ($domain === null || trim($domain) === '') { $this->line('[FAIL] --domain es requerido.'); return 1; }
+
+            if ($action === 'pause') {
+                $reason = (string) ($this->readOptionValue($argv, 'reason') ?? 'manual pause');
+                $entry = $service->pause($domain, $reason);
+                $this->line(sprintf('[OK] Dominio pausado: %s | reason=%s | paused_at=%s', $entry['domain'], $entry['reason'], $entry['paused_at']));
+                return 0;
+            }
+
+            if ($action === 'resume') {
+                $found = $service->resume($domain);
+                $this->line($found ? '[OK] Dominio reactivado.' : '[OK] Dominio ya estaba activo.');
+                return 0;
+            }
+
+            if ($action === 'status') {
+                $status = $service->status($domain);
+                $this->line(sprintf('domain=%s | paused=%s | reason=%s | paused_at=%s', $status['domain'], $status['paused'] ? 'true' : 'false', $status['reason'] ?: '-', $status['paused_at'] ?: '-'));
+                return 0;
+            }
+
+            $this->line('[FAIL] Acción inválida. Usa: list|pause|resume|status');
+            return 1;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] Error en crawl:domain-policy.');
+            return 1;
+        }
+    }
+
+    private function buildCrawlDomainPolicyService(): CrawlDomainPolicyService
+    {
+        return new CrawlDomainPolicyService(BASE_PATH . '/storage/crawler/domain-policy.json');
+    }
+
     private function crawlRun(array $argv): int
     {
         Env::load(BASE_PATH);
@@ -283,7 +342,11 @@ final class Kernel
         }
 
         $jobs = $jobId !== null ? array_filter([CrawlJob::find($jobId)]) : CrawlJob::queued($limit);
-        $crawler = new CrawlerService(new RobotsTxtService());
+        $policyService = $this->buildCrawlDomainPolicyService();
+        if ($policyService->getLastWarning() !== null) {
+            $this->line('[WARN] ' . $policyService->getLastWarning());
+        }
+        $crawler = new CrawlerService(new RobotsTxtService(), new \Browser\Services\CrawlRateLimiter(), $policyService);
 
         foreach ($jobs as $job) {
             if (($job['status'] ?? '') !== 'queued') {
@@ -299,6 +362,10 @@ final class Kernel
                 if ($skips > 0) {
                     $cooldown = (int) ($stats['rate_limit_cooldown_seconds'] ?? 0);
                     $this->line("[INFO] crawl job #{$id} rate-limit: {$skips} URL(s) diferidas por dominio (cooldown {$cooldown}s).");
+                }
+                $pausedSkips = (int) ($stats['paused_domain_skips'] ?? 0);
+                if ($pausedSkips > 0) {
+                    $this->line("[INFO] crawl job #{$id} pausado: {$pausedSkips} URL(s) diferidas por dominio pausado.");
                 }
                 $this->line("[OK] crawl job #{$id} completed");
             } catch (Throwable $exception) {
@@ -711,7 +778,9 @@ final class Kernel
         $withErrors = in_array('--errors', $argv, true);
 
         try {
-            $service = new CrawlDomainStatusService(Database::connection());
+            $policyService = $this->buildCrawlDomainPolicyService();
+            if ($policyService->getLastWarning() !== null) { $this->line('[WARN] ' . $policyService->getLastWarning()); }
+            $service = new CrawlDomainStatusService(Database::connection(), $policyService);
             $rows = $service->summarize($limit, $domain, $withErrors);
 
             if ($rows === []) {
@@ -721,8 +790,9 @@ final class Kernel
 
             foreach ($rows as $row) {
                 $this->line(sprintf(
-                    'domain=%s | queued=%d running=%d indexed=%d skipped=%d failed=%d indexed_pages=%d last_created_at=%s last_updated_at=%s',
+                    'domain=%s | paused=%s | queued=%d running=%d indexed=%d skipped=%d failed=%d indexed_pages=%d last_created_at=%s last_updated_at=%s',
                     (string) ($row['domain'] ?? '-'),
+                    ((bool) ($row['paused'] ?? false)) ? 'true' : 'false',
                     (int) ($row['queued'] ?? 0),
                     (int) ($row['running'] ?? 0),
                     (int) ($row['indexed'] ?? 0),
