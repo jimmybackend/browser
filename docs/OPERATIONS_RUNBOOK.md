@@ -247,3 +247,12 @@ php bin/browser crawl:domains --errors
 Usar esta vista para decidir si sembrar más URLs o pausar dominios con señales de riesgo (429/403/503, timeouts repetidos, robots disallow).
 
 > `crawl:domains` es solo lectura y no ejecuta crawler. El cron con `crawl:run --limit=1` sigue siendo el único procesador real.
+
+
+## Control manual de dominio pausado
+
+- Comando operativo: `php bin/browser crawl:domain-policy <list|pause|resume|status>`.
+- Persiste políticas en `storage/crawler/domain-policy.json` (se crea solo en `pause`/`resume`).
+- `crawl:run` difiere URLs de dominios pausados sin marcarlas `failed`; permanecen `queued`.
+- `crawl:domains` muestra `paused=true/false` por dominio.
+- El procesamiento real sigue siendo por cron con `php bin/browser crawl:run --limit=1`.
