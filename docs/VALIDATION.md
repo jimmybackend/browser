@@ -488,3 +488,13 @@ Criterios:
 - Resumen final separa: `jobs creados`, `URLs inválidas`, `URLs duplicadas`, `errores controlados`.
 - El procesamiento real del crawler sigue siendo exclusivo de `crawl:run` (cron/manual), sin ejecución directa desde comandos de siembra.
 - No se agregaron migraciones ni cambios de esquema de BD en esta mejora.
+
+## Validación específica de rate limit del crawler
+
+Cambios cubiertos:
+- `app/Services/CrawlRateLimiter.php` agrega cooldown por dominio (15s).
+- `CrawlerService` evita procesar múltiples URLs del mismo dominio dentro del cooldown en una misma corrida.
+- URLs diferidas por cooldown quedan en `queued` y se reportan en salida CLI desde `crawl:run`.
+
+Pruebas agregadas:
+- `tests/CrawlRateLimiterTest.php` cubre bloqueo temporal por dominio, comportamiento entre dominios y case-insensitive.

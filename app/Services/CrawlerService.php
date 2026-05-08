@@ -16,8 +16,10 @@ final class CrawlerService
     private const MAX_BYTES = 2097152;
     private const TIMEOUT_SECONDS = 8;
 
-    public function __construct(private readonly RobotsTxtService $robotsTxt)
-    {
+    public function __construct(
+        private readonly RobotsTxtService $robotsTxt,
+        private readonly CrawlRateLimiter $rateLimiter = new CrawlRateLimiter()
+    ) {
     }
 
     public function runJob(array $job): array
@@ -37,10 +39,25 @@ final class CrawlerService
         CrawlUrl::enqueue($jobId, $seed, hash('sha256', $seed), $seedDomain, 0, null);
 
         $indexed = 0;
+        $rateLimitedSkips = 0;
 
         while ($indexed < $maxPages) {
-            $next = CrawlUrl::nextQueued($jobId);
+            $queued = CrawlUrl::queuedByJob($jobId, 100);
+            if ($queued === []) {
+                break;
+            }
+
+            $next = null;
+            foreach ($queued as $candidate) {
+                $candidateDomain = strtolower((string) ($candidate['domain'] ?? ''));
+                if ($this->rateLimiter->canProcessDomain($candidateDomain)) {
+                    $next = $candidate;
+                    break;
+                }
+            }
+
             if ($next === null) {
+                $rateLimitedSkips += count($queued);
                 break;
             }
 
@@ -69,6 +86,7 @@ final class CrawlerService
                 IndexedPage::upsert($page);
                 CrawlUrl::markDone((int) $next['id'], 'indexed', $response['http_status'], null);
                 $indexed++;
+                $this->rateLimiter->markProcessed((string) ($next['domain'] ?? ''));
 
                 foreach ($page['links'] as $link) {
                     $normalized = $this->normalizeUrl($link, $url);
@@ -85,7 +103,7 @@ final class CrawlerService
                     CrawlUrl::enqueue($jobId, $normalized, hash('sha256', $normalized), $domain, $depth + 1, $url);
                 }
 
-                sleep(1);
+                $this->sleepBetweenRequests();
             } catch (Throwable $exception) {
                 CrawlUrl::markDone((int) $next['id'], 'failed', null, mb_substr($exception->getMessage(), 0, 500));
             }
@@ -94,10 +112,12 @@ final class CrawlerService
         return [
             'pages_found' => CrawlUrl::countByJob($jobId),
             'pages_indexed' => $indexed,
+            'rate_limited_skips' => $rateLimitedSkips,
+            'rate_limit_cooldown_seconds' => CrawlRateLimiter::cooldownSeconds(),
         ];
     }
 
-    private function fetchHtml(string $url): array
+    protected function fetchHtml(string $url): array
     {
         $this->assertSafeTarget($url);
 
@@ -280,6 +300,11 @@ final class CrawlerService
         );
 
         return implode('/', $encoded);
+    }
+
+    protected function sleepBetweenRequests(): void
+    {
+        sleep(1);
     }
 
     private function assertSafeTarget(string $url): void
