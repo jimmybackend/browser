@@ -294,3 +294,13 @@
 - [x] Soportar `--domain`, `--limit` y `--json`.
 - [x] Mantener comportamiento no destructivo: sin `crawl:run`, sin siembra de jobs, sin pausa automática, sin cambios en `domain-policy.json`.
 - [x] Agregar pruebas PHPUnit para reporte vacío, agregaciones y contrato de solo lectura.
+
+
+## Fase 29: Exportación de snapshots de `crawl:report`
+
+- [x] Extender `crawl:report` con `--save` para guardar snapshot JSON local.
+- [x] Guardar únicamente en `storage/crawler/reports/` con nombre seguro y estable.
+- [x] Mantener compatibilidad de salida humana y `--json`.
+- [x] Manejar errores de escritura con exit code `1` y mensaje claro.
+- [x] Agregar pruebas PHPUnit para guardado, sanitización de nombre y contrato de solo lectura.
+- [x] Confirmar que no hay cambios en migraciones, esquema BD, `.env`, Nginx ni políticas de pausa automática.

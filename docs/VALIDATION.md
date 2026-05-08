@@ -556,3 +556,21 @@ Criterios:
 - no siembra jobs;
 - no modifica `storage/crawler/domain-policy.json`;
 - usa consultas de solo lectura para BD.
+
+## Validación específica: `crawl:report --save`
+
+Comandos:
+
+```bash
+php bin/browser crawl:report --save
+php bin/browser crawl:report --save --json
+php bin/browser crawl:report --save --domain=example.com --limit=20
+```
+
+Criterios:
+
+- guarda snapshot JSON en `storage/crawler/reports/`;
+- crea directorio si no existe;
+- nombre de archivo sanitizado (sin rutas arbitrarias/path traversal);
+- mantiene contrato previo de salida humana/JSON;
+- no ejecuta crawler, no siembra jobs, no pausa dominios, no modifica `domain-policy.json` ni tablas.
