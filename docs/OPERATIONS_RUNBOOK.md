@@ -235,3 +235,15 @@ Notas operativas:
   - Propios: puede subirse `max_pages` gradualmente (25-50) monitoreando errores.
 - Señales para pausar temporalmente si aumentan:
   - 429, 403, 503, timeouts cURL.
+
+
+### Resumen por dominio (antes de sembrar)
+
+```bash
+php bin/browser crawl:domains --limit=20
+php bin/browser crawl:domains --errors
+```
+
+Usar esta vista para decidir si sembrar más URLs o pausar dominios con señales de riesgo (429/403/503, timeouts repetidos, robots disallow).
+
+> `crawl:domains` es solo lectura y no ejecuta crawler. El cron con `crawl:run --limit=1` sigue siendo el único procesador real.

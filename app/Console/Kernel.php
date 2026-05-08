@@ -9,6 +9,7 @@ use Browser\Core\Env;
 use Browser\Core\Session;
 use Browser\Models\CrawlJob;
 use Browser\Services\CrawlerService;
+use Browser\Services\CrawlDomainStatusService;
 use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
@@ -44,6 +45,7 @@ final class Kernel
             'crawl:run' => $this->crawlRun($argv),
             'crawl:status' => $this->crawlStatus(),
             'crawl:errors' => $this->crawlErrors(),
+            'crawl:domains' => $this->crawlDomains($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
             'auth:doctor' => $this->authDoctor(),
@@ -71,6 +73,7 @@ final class Kernel
         $this->line('  crawl:run     Ejecuta jobs queued de crawler');
         $this->line('  crawl:status  Muestra resumen de jobs crawler');
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
+        $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -682,6 +685,70 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo obtener crawl:errors. Verifica conexión a base de datos.');
+            return 1;
+        }
+    }
+
+    private function crawlDomains(array $argv): int
+    {
+        Env::load(BASE_PATH);
+
+        $limit = $this->parseIntOption($argv, 'limit', 20, 1, 200);
+        if ($limit === null) {
+            $this->line('[FAIL] --limit debe ser entero entre 1 y 200.');
+            return 1;
+        }
+
+        $domain = $this->readOptionValue($argv, 'domain');
+        if ($domain !== null) {
+            $domain = strtolower(trim($domain));
+            if ($domain === '') {
+                $this->line('[FAIL] --domain no puede estar vacío.');
+                return 1;
+            }
+        }
+
+        $withErrors = in_array('--errors', $argv, true);
+
+        try {
+            $service = new CrawlDomainStatusService(Database::connection());
+            $rows = $service->summarize($limit, $domain, $withErrors);
+
+            if ($rows === []) {
+                $this->line('No hay datos de dominios del crawler todavía.');
+                return 0;
+            }
+
+            foreach ($rows as $row) {
+                $this->line(sprintf(
+                    'domain=%s | queued=%d running=%d indexed=%d skipped=%d failed=%d indexed_pages=%d last_created_at=%s last_updated_at=%s',
+                    (string) ($row['domain'] ?? '-'),
+                    (int) ($row['queued'] ?? 0),
+                    (int) ($row['running'] ?? 0),
+                    (int) ($row['indexed'] ?? 0),
+                    (int) ($row['skipped'] ?? 0),
+                    (int) ($row['failed'] ?? 0),
+                    (int) ($row['indexed_pages_count'] ?? 0),
+                    (string) ($row['last_created_at'] ?? '-'),
+                    (string) ($row['last_updated_at'] ?? '-')
+                ));
+
+                if ($withErrors) {
+                    $errors = $row['recent_errors'] ?? [];
+                    if (!is_array($errors) || $errors === []) {
+                        $this->line('  errores: sin errores recientes');
+                        continue;
+                    }
+
+                    foreach ($errors as $error) {
+                        $this->line('  error: ' . (string) $error);
+                    }
+                }
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo obtener crawl:domains. Verifica conexión a base de datos.');
             return 1;
         }
     }

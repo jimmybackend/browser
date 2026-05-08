@@ -180,3 +180,25 @@ Este comando solo crea jobs `queued` usando `CrawlJob::create()`. El procesamien
   - Sitios propios: `--limit=1` cada 1-2 min, `max_pages` 25-50 según capacidad.
   - Sitios externos: `--limit=1` cada 5 min, `max_pages` 10-25 para minimizar 429/403/503.
   - Pausar/ajustar ante señales repetidas: HTTP 429, 403, 503 o timeouts.
+
+
+## Observabilidad por dominio (solo lectura)
+
+Nuevo comando operativo:
+
+```bash
+php bin/browser crawl:domains --limit=20
+php bin/browser crawl:domains --domain=example.com
+php bin/browser crawl:domains --errors
+```
+
+`crawl:domains` es **solo lectura**: consulta estado por dominio usando únicamente `SELECT` (sin `INSERT`, `UPDATE`, `DELETE`, migraciones ni cambios de esquema). Sirve para decidir si conviene sembrar más URLs o pausar temporalmente un dominio.
+
+Señales para pausar un dominio:
+- muchos `429`
+- muchos `403`
+- muchos `503`
+- timeouts repetidos
+- bloqueos por `robots.txt` (disallow)
+
+El procesamiento real del crawler sigue siendo exclusivo del cron con `php bin/browser crawl:run --limit=1`.

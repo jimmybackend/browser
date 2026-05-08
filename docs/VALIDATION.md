@@ -498,3 +498,21 @@ Cambios cubiertos:
 
 Pruebas agregadas:
 - `tests/CrawlRateLimiterTest.php` cubre bloqueo temporal por dominio, comportamiento entre dominios y case-insensitive.
+
+
+## Validación específica: resumen de crawler por dominio (solo lectura)
+
+Cambios cubiertos en esta iteración:
+
+- Se agregó comando `php bin/browser crawl:domains` con opciones `--limit`, `--domain` y `--errors`.
+- El comando usa únicamente consultas `SELECT` con prepared statements para resumir `crawl_urls` e `indexed_pages` por dominio.
+- No ejecuta `crawl:run`, no siembra jobs y termina con exit code `0` cuando no hay datos (mensaje: `No hay datos de dominios del crawler todavía.`).
+
+Comandos sugeridos:
+
+```bash
+php bin/browser help
+php bin/browser crawl:domains --limit=20
+php bin/browser crawl:domains --domain=example.com
+php bin/browser crawl:domains --errors
+```
