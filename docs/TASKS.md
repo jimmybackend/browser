@@ -330,3 +330,14 @@
 - [x] Permitir `--domain` solo junto a `--latest` reutilizando sanitización segura existente.
 - [x] Soportar salida humana y `--json` validado.
 - [x] Confirmar contrato no destructivo: sin BD, sin `crawl:run`, sin siembra de jobs y sin pausas automáticas.
+
+
+## Fase 24: Diff seguro de snapshots del crawler (solo lectura)
+
+- [x] Agregar comando `crawl:report-diff` en `Kernel` y `help`.
+- [x] Soportar modo explícito `--from/--to` y modo automático `--latest=2` (mutuamente excluyentes).
+- [x] Permitir `--domain` solo con `--latest=2` usando sanitización segura.
+- [x] Comparar jobs/urls/indexed_pages/paused_domains/recommendations/recent_errors con deltas.
+- [x] Salida humana y `--json`.
+- [x] Rechazar nombres inseguros/rutas/path traversal fuera de `storage/crawler/reports/`.
+- [x] Mantener comando 100% solo lectura (sin BD writes, sin crawl run, sin siembra, sin pausas automáticas).

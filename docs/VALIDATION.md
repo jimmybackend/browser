@@ -618,3 +618,21 @@ Criterios:
 - valida patrón seguro `crawl-report-*.json` y rechaza rutas/path traversal;
 - solo lee `storage/crawler/reports/`;
 - no toca BD, no ejecuta crawler, no siembra jobs y no pausa dominios.
+
+
+## Validación específica: crawl:report-diff
+
+Comandos:
+
+```bash
+php bin/browser crawl:report-diff --from=crawl-report-20260511-100000.json --to=crawl-report-20260511-120000.json
+php bin/browser crawl:report-diff --latest=2
+php bin/browser crawl:report-diff --latest=2 --domain=example.com
+php bin/browser crawl:report-diff --latest=2 --json
+```
+
+Criterios:
+- comando de solo lectura;
+- solo lee `storage/crawler/reports/` y valida `crawl-report-*.json`;
+- rechaza rutas/path traversal;
+- no modifica BD, no ejecuta crawler, no siembra jobs y no pausa dominios.

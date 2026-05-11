@@ -305,3 +305,17 @@ Este comando es estrictamente de lectura: no ejecuta crawler, no siembra jobs y 
 - `php bin/browser crawl:report-prune --days=30` (dry-run por defecto para snapshots viejos).
 - `php bin/browser crawl:report-prune --keep=50 --confirm` (borra snapshots excedentes manteniendo los 50 más recientes).
 - Seguridad: trabaja únicamente en `storage/crawler/reports/` y evita path traversal usando nombres seguros `crawl-report-*.json`.
+
+
+## Diff de snapshots de crawler (solo lectura)
+
+Comando operativo:
+
+```bash
+php bin/browser crawl:report-diff --from=crawl-report-YYYYMMDD-HHMMSS.json --to=crawl-report-YYYYMMDD-HHMMSS.json
+php bin/browser crawl:report-diff --latest=2
+php bin/browser crawl:report-diff --latest=2 --domain=example.com
+php bin/browser crawl:report-diff --latest=2 --json
+```
+
+Garantías: solo lectura de `storage/crawler/reports/`; sin cambios de BD; sin ejecución de crawler; sin pausas automáticas; sin siembra de jobs.

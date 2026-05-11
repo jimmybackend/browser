@@ -17,6 +17,7 @@ use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\CrawlReportStorageService;
 use Browser\Services\CrawlReportHistoryService;
 use Browser\Services\CrawlReportPruneService;
+use Browser\Services\CrawlReportDiffService;
 use Browser\Services\CrawlReportShowService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
@@ -58,6 +59,7 @@ final class Kernel
             'crawl:report-history' => $this->crawlReportHistory($argv),
             'crawl:report-prune' => $this->crawlReportPrune($argv),
             'crawl:report-show' => $this->crawlReportShow($argv),
+            'crawl:report-diff' => $this->crawlReportDiff($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -92,6 +94,7 @@ final class Kernel
         $this->line('  crawl:report-history Historial de snapshots JSON guardados por crawl:report --save (solo lectura)');
         $this->line('  crawl:report-prune Limpia snapshots antiguos (dry-run por defecto; borrar solo con --confirm)');
         $this->line('  crawl:report-show Muestra un snapshot guardado (solo lectura)');
+        $this->line('  crawl:report-diff Compara dos snapshots guardados (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -1102,6 +1105,88 @@ final class Kernel
             $this->line('Motivo: ' . $exception->getMessage());
             return 1;
         }
+    }
+
+    private function crawlReportDiff(array $argv): int
+    {
+        $from = $this->readOptionValue($argv, 'from');
+        $to = $this->readOptionValue($argv, 'to');
+        $latest = $this->readOptionValue($argv, 'latest');
+        $domain = $this->readOptionValue($argv, 'domain');
+        $jsonMode = in_array('--json', $argv, true);
+
+        $explicitMode = $from !== null || $to !== null;
+        $latestMode = $latest !== null;
+
+        if ($explicitMode && $latestMode) { $this->line('[FAIL] Usa modo explícito (--from/--to) o automático (--latest=2), no ambos.'); return 1; }
+        if (!$explicitMode && !$latestMode) { $this->line('[FAIL] Debes usar --from/--to o --latest=2.'); return 1; }
+        if (($from === null) !== ($to === null)) { $this->line('[FAIL] En modo explícito debes indicar ambos: --from y --to.'); return 1; }
+        if ($domain !== null && !$latestMode) { $this->line('[FAIL] --domain solo se permite con --latest=2.'); return 1; }
+        if ($latestMode && trim((string) $latest) !== '2') { $this->line('[FAIL] --latest solo acepta valor 2 por ahora.'); return 1; }
+
+        try {
+            $showService = new CrawlReportShowService(BASE_PATH . '/storage/crawler/reports');
+            if ($latestMode) {
+                $domain = $domain !== null ? trim($domain) : null;
+                if ($domain === '') { $this->line('[FAIL] --domain no puede estar vacío.'); return 1; }
+                $history = new CrawlReportHistoryService(BASE_PATH . '/storage/crawler/reports');
+                $items = $history->list(2, $domain);
+                if (count($items) < 2) { $this->line('[FAIL] No hay suficientes snapshots para comparar (se requieren 2).'); return 1; }
+                $fromFile = (string) $items[1]['filename'];
+                $toFile = (string) $items[0]['filename'];
+            } else {
+                $fromFile = (string) $from;
+                $toFile = (string) $to;
+            }
+
+            $fromSnapshot = $showService->showByFilename($fromFile);
+            $toSnapshot = $showService->showByFilename($toFile);
+            $fromReport = (array) ($fromSnapshot['report'] ?? []);
+            $toReport = (array) ($toSnapshot['report'] ?? []);
+            $fromReport['_meta'] = ['filename' => $fromSnapshot['filename'] ?? $fromFile];
+            $toReport['_meta'] = ['filename' => $toSnapshot['filename'] ?? $toFile];
+
+            $diff = (new CrawlReportDiffService())->diff($fromReport, $toReport);
+            if ($jsonMode) {
+                $this->line((string) json_encode($diff, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                return 0;
+            }
+
+            $this->line('Crawler snapshot diff');
+            $this->line(sprintf('- from: %s', (string) (($diff['from']['filename'] ?? '-') )));
+            $this->line(sprintf('- to: %s', (string) (($diff['to']['filename'] ?? '-') )));
+            $this->line('');
+            $this->line('Jobs:');
+            foreach ((array) ($diff['jobs'] ?? []) as $status => $item) {
+                $this->line(sprintf('- %s: %d -> %d (%+d)', (string) $status, (int) ($item['from'] ?? 0), (int) ($item['to'] ?? 0), (int) ($item['delta'] ?? 0)));
+            }
+            $this->line('');
+            $this->line('URLs:');
+            foreach ((array) ($diff['urls'] ?? []) as $status => $item) {
+                $this->line(sprintf('- %s: %d -> %d (%+d)', (string) $status, (int) ($item['from'] ?? 0), (int) ($item['to'] ?? 0), (int) ($item['delta'] ?? 0)));
+            }
+            $indexed = (array) ($diff['indexed_pages_total'] ?? []);
+            $this->line('');
+            $this->line(sprintf('Indexed pages total: %d -> %d (%+d)', (int) ($indexed['from'] ?? 0), (int) ($indexed['to'] ?? 0), (int) ($indexed['delta'] ?? 0)));
+            $this->renderListDiff('Paused domains', (array) ($diff['paused_domains'] ?? []));
+            $this->renderListDiff('Recommendations', (array) ($diff['recommendations'] ?? []));
+            $this->renderListDiff('Recent errors', (array) ($diff['recent_errors'] ?? []));
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo comparar snapshots del crawler.');
+            $this->line('Motivo: ' . $exception->getMessage());
+            return 1;
+        }
+    }
+
+    /** @param array<string,mixed> $diff */
+    private function renderListDiff(string $title, array $diff): void
+    {
+        $this->line('');
+        $this->line($title . ':');
+        $this->line(sprintf('- count: %d -> %d', (int) ($diff['from_count'] ?? 0), (int) ($diff['to_count'] ?? 0)));
+        $this->line(sprintf('- added (%d): %s', (int) ($diff['added_count'] ?? 0), implode(', ', (array) ($diff['added'] ?? [])) ?: '-'));
+        $this->line(sprintf('- removed (%d): %s', (int) ($diff['removed_count'] ?? 0), implode(', ', (array) ($diff['removed'] ?? [])) ?: '-'));
     }
 
     private function crawlReport(array $argv): int
