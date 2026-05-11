@@ -50,7 +50,7 @@ final class CrawlReportShowServiceTest extends TestCase
 
         $service = new CrawlReportShowService($dir);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $service->showByFilename('../crawl-report-20260511-120000.json');
     }
 
@@ -65,11 +65,11 @@ final class CrawlReportShowServiceTest extends TestCase
         try {
             $service->showByFilename('crawl-report-20260511-120000.json');
             $this->fail('Expected invalid json failure');
-        } catch (RuntimeException $e) {
+        } catch (\RuntimeException $e) {
             $this->assertStringContainsString('JSON inválido', $e->getMessage());
         }
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $service->showByFilename('crawl-report-20260511-130000.json');
     }
 
@@ -78,7 +78,36 @@ final class CrawlReportShowServiceTest extends TestCase
         $kernel = (string) file_get_contents(dirname(__DIR__) . '/app/Console/Kernel.php');
         $this->assertStringContainsString('crawl:report-show', $kernel);
 
-        $this->assertStringNotContainsString('crawlRun(', $kernel);
-        $this->assertStringNotContainsString('CrawlJob::create(', $kernel);
+        $body = $this->extractMethodBody($kernel, 'crawlReportShow');
+        $this->assertStringContainsString('storage/crawler/reports', $body);
+        $this->assertStringNotContainsString('crawlRun(', $body);
+        $this->assertStringNotContainsString('CrawlJob::create(', $body);
+        $this->assertStringNotContainsString('pause(', $body);
+        $this->assertStringNotContainsString('domain-policy.json', $body);
+        $this->assertDoesNotMatchRegularExpression('/\\b(INSERT|UPDATE|DELETE|ALTER|DROP)\\b/i', $body);
+    }
+
+    private function extractMethodBody(string $source, string $methodName): string
+    {
+        $signature = 'private function ' . $methodName . '(';
+        $start = strpos($source, $signature);
+        $this->assertNotFalse($start);
+        $braceStart = strpos($source, '{', $start);
+        $this->assertNotFalse($braceStart);
+
+        $depth = 0;
+        for ($i = $braceStart; $i < strlen($source); $i++) {
+            if ($source[$i] === '{') {
+                $depth++;
+            }
+            if ($source[$i] === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($source, $braceStart + 1, $i - $braceStart - 1);
+                }
+            }
+        }
+
+        self::fail('No se pudo extraer método.');
     }
 }
