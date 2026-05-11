@@ -319,3 +319,14 @@ php bin/browser crawl:report-diff --latest=2 --json
 ```
 
 Garantías: solo lectura de `storage/crawler/reports/`; sin cambios de BD; sin ejecución de crawler; sin pausas automáticas; sin siembra de jobs.
+
+
+## crawl:report-summary (solo lectura)
+
+- Comando: `php bin/browser crawl:report-summary [--limit=10] [--domain=example.com] [--json]`.
+- Resume tendencia usando snapshots guardados en `storage/crawler/reports/`.
+- Solo lee archivos seguros `crawl-report-*.json`; ignora ocultos, `.tmp`, extensiones no JSON y nombres fuera de patrón.
+- No toca BD, no ejecuta crawler, no pausa dominios, no siembra jobs, no modifica `storage/crawler/domain-policy.json` y no borra snapshots.
+- Si hay snapshots JSON inválidos, los ignora y contabiliza en `invalid_count`.
+- Para borrar snapshots, usar `php bin/browser crawl:report-prune --confirm`.
+- No hay auto-deploy.

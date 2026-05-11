@@ -341,3 +341,14 @@
 - [x] Salida humana y `--json`.
 - [x] Rechazar nombres inseguros/rutas/path traversal fuera de `storage/crawler/reports/`.
 - [x] Mantener comando 100% solo lectura (sin BD writes, sin crawl run, sin siembra, sin pausas automáticas).
+
+
+## crawl:report-summary (solo lectura)
+
+- Comando: `php bin/browser crawl:report-summary [--limit=10] [--domain=example.com] [--json]`.
+- Resume tendencia usando snapshots guardados en `storage/crawler/reports/`.
+- Solo lee archivos seguros `crawl-report-*.json`; ignora ocultos, `.tmp`, extensiones no JSON y nombres fuera de patrón.
+- No toca BD, no ejecuta crawler, no pausa dominios, no siembra jobs, no modifica `storage/crawler/domain-policy.json` y no borra snapshots.
+- Si hay snapshots JSON inválidos, los ignora y contabiliza en `invalid_count`.
+- Para borrar snapshots, usar `php bin/browser crawl:report-prune --confirm`.
+- No hay auto-deploy.
