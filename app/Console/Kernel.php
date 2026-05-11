@@ -14,6 +14,7 @@ use Browser\Services\CrawlDomainPolicyService;
 use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\CrawlOperationalReportService;
+use Browser\Services\CrawlReportStorageService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -81,7 +82,7 @@ final class Kernel
         $this->line('  crawl:errors  Diagnóstico de errores recientes del crawler');
         $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
         $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
-        $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura)');
+        $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura, opcional --save)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -917,6 +918,7 @@ final class Kernel
         }
 
         $jsonMode = in_array('--json', $argv, true);
+        $saveMode = in_array('--save', $argv, true);
 
         try {
             $pdo = Database::connection();
@@ -933,16 +935,32 @@ final class Kernel
             );
 
             $report = $reportService->build($domain, $limit);
+            $output = [
+                'jobs' => $report['jobs'] ?? [],
+                'urls' => $report['urls'] ?? [],
+                'indexed_pages' => $report['indexed_pages'] ?? ['total' => 0],
+                'paused_domains' => $report['paused_domains'] ?? [],
+                'domain_advice' => $report['domain_advice'] ?? [],
+                'recent_errors' => $report['recent_errors'] ?? [],
+                'filters' => $report['filters'] ?? ['domain' => null, 'limit' => $limit],
+                'has_data' => (bool) ($report['has_data'] ?? false),
+            ];
+
+            if ($saveMode) {
+                $storage = new CrawlReportStorageService(BASE_PATH . '/storage/crawler/reports');
+                try {
+                    $savedPath = $storage->save($output, $domain);
+                    $relativePath = ltrim(str_replace(BASE_PATH . '/', '', $savedPath), '/');
+                    $this->line('[OK] Snapshot guardado: ' . $relativePath);
+                } catch (Throwable $exception) {
+                    $this->line('[FAIL] No se pudo guardar snapshot de crawl:report.');
+                    $this->line('Motivo: ' . $exception->getMessage());
+                    return 1;
+                }
+            }
 
             if ($jsonMode) {
-                $json = json_encode([
-                    'jobs' => $report['jobs'] ?? [],
-                    'urls' => $report['urls'] ?? [],
-                    'indexed_pages' => $report['indexed_pages'] ?? ['total' => 0],
-                    'paused_domains' => $report['paused_domains'] ?? [],
-                    'domain_advice' => $report['domain_advice'] ?? [],
-                    'recent_errors' => $report['recent_errors'] ?? [],
-                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                $json = json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
                 $this->line(is_string($json) ? $json : '{}');
                 return 0;

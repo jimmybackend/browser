@@ -284,3 +284,9 @@ php bin/browser crawl:report --json
 ```
 
 Este comando es estrictamente de lectura: no ejecuta crawler, no siembra jobs y no cambia políticas de dominio.
+
+## Histórico operativo del crawler
+
+- Generar snapshot manual: `php bin/browser crawl:report --save` (opcional `--json`, `--domain`, `--limit`).
+- Archivo generado: `storage/crawler/reports/crawl-report-...json`.
+- Uso: trazabilidad histórica sin sembrar jobs ni ejecutar crawler.

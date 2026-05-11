@@ -238,3 +238,9 @@ Opciones:
 - `php bin/browser crawl:report --json`
 
 El procesamiento real sigue siendo exclusivo de cron con `php bin/browser crawl:run --limit=1`.
+
+## Snapshots operativos (`crawl:report --save`)
+
+- `php bin/browser crawl:report --save` guarda un snapshot JSON en `storage/crawler/reports/`.
+- Solo exporta estado operativo; no ejecuta `crawl:run`, no pausa dominios y no modifica la base de datos.
+- El cron sigue siendo el único procesamiento real: `php bin/browser crawl:run --limit=1`.

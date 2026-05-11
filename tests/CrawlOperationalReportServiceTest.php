@@ -6,6 +6,7 @@ use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlDomainPolicyService;
 use Browser\Services\CrawlDomainStatusService;
 use Browser\Services\CrawlOperationalReportService;
+use Browser\Services\CrawlReportStorageService;
 use PHPUnit\Framework\TestCase;
 
 final class CrawlOperationalReportServiceTest extends TestCase
@@ -62,6 +63,48 @@ final class CrawlOperationalReportServiceTest extends TestCase
         $this->assertStringNotContainsString('pause(', $body);
         $this->assertStringNotContainsString('resume(', $body);
         $this->assertStringNotContainsString('CrawlJob::create(', $body);
+    }
+
+
+    public function testSaveCreatesDirectoryAndJsonSnapshot(): void
+    {
+        $base = sys_get_temp_dir() . '/crawler-reports-' . bin2hex(random_bytes(4));
+        $reportsDir = $base . '/storage/crawler/reports';
+
+        $service = new CrawlReportStorageService($reportsDir);
+        $saved = $service->save(['jobs' => ['queued' => 0], 'has_data' => false], null);
+
+        $this->assertFileExists($saved);
+        $this->assertDirectoryExists($reportsDir);
+        $this->assertStringContainsString('crawl-report-', basename($saved));
+        $decoded = json_decode((string) file_get_contents($saved), true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(false, $decoded['has_data']);
+    }
+
+    public function testSaveUsesSafeDomainInFilename(): void
+    {
+        $reportsDir = sys_get_temp_dir() . '/crawler-reports-' . bin2hex(random_bytes(4));
+        $service = new CrawlReportStorageService($reportsDir);
+
+        $saved = $service->save(['jobs' => []], '../../Example.COM/evil');
+
+        $this->assertStringContainsString('crawl-report-example.com-evil-', basename($saved));
+        $this->assertStringNotContainsString('..', basename($saved));
+        $this->assertStringNotContainsString('/', basename($saved));
+    }
+
+    public function testCommandIncludesSaveOptionAndKeepsReadOnlyContract(): void
+    {
+        $kernel = (string) file_get_contents(dirname(__DIR__) . '/app/Console/Kernel.php');
+        $body = $this->extractMethodBody($kernel, 'crawlReport');
+
+        $this->assertStringContainsString("--save", $body);
+        $this->assertStringContainsString("storage/crawler/reports", $body);
+        $this->assertStringContainsString("No se pudo guardar snapshot", $body);
+        $this->assertStringNotContainsString('crawlRun(', $body);
+        $this->assertStringNotContainsString('CrawlJob::create(', $body);
+        $this->assertStringNotContainsString('domain-policy.json', $body);
     }
 
     private function buildService(PDO $pdo, array $policies): CrawlOperationalReportService
