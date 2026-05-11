@@ -71,14 +71,38 @@ final class CrawlDomainStatusServiceTest extends TestCase
         $kernelSource = file_get_contents(dirname(__DIR__) . '/app/Console/Kernel.php');
         $this->assertNotFalse($kernelSource);
 
-        $this->assertStringContainsString('private function crawlDomains(array $argv): int', $kernelSource);
-        preg_match('/private function crawlDomains\(array \$argv\): int\s*\{(?P<body>.*?)\n    \}\n\n    private function classifyCrawlerError/s', (string) $kernelSource, $matches);
-        $body = (string) ($matches['body'] ?? '');
-
-        $this->assertNotSame('', $body);
+        $body = $this->extractMethodBody((string) $kernelSource, 'crawlDomains');
         $this->assertDoesNotMatchRegularExpression('/\b(INSERT|UPDATE|DELETE|ALTER|DROP)\b/i', $body);
         $this->assertStringNotContainsString('runJob(', $body);
         $this->assertStringNotContainsString('crawlRun(', $body);
+    }
+
+
+    private function extractMethodBody(string $source, string $methodName): string
+    {
+        $signature = 'private function ' . $methodName . '(';
+        $start = strpos($source, $signature);
+        $this->assertNotFalse($start, 'No se encontró la firma del método: ' . $methodName);
+
+        $braceStart = strpos($source, '{', (int) $start);
+        $this->assertNotFalse($braceStart, 'No se encontró la llave de apertura del método: ' . $methodName);
+
+        $depth = 0;
+        $length = strlen($source);
+        for ($i = (int) $braceStart; $i < $length; $i++) {
+            if ($source[$i] === '{') {
+                $depth++;
+            }
+
+            if ($source[$i] === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($source, (int) $braceStart + 1, $i - (int) $braceStart - 1);
+                }
+            }
+        }
+
+        self::fail('No se pudo extraer el cuerpo del método: ' . $methodName);
     }
 
     private function buildPdo(): PDO
