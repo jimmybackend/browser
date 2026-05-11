@@ -321,3 +321,12 @@
 - [x] Soportar `--days`, `--keep`, `--domain`, `--confirm`, `--json` con validaciones seguras.
 - [x] Ignorar archivos fuera del patrón `crawl-report-*.json` y evitar path traversal.
 - [x] Confirmar alcance no destructivo: sin cambios de BD, sin `crawl:run`, sin pausa automática, sin jobs.
+
+## Fase 31: Visualización segura de snapshots guardados
+
+- [x] Agregar comando `crawl:report-show` en `Kernel` y `help`.
+- [x] Implementar `CrawlReportShowService` de solo lectura para `--file` y `--latest`.
+- [x] Validar nombre de archivo seguro (`crawl-report-*.json`) sin rutas, `..`, ocultos ni extensiones no `.json`.
+- [x] Permitir `--domain` solo junto a `--latest` reutilizando sanitización segura existente.
+- [x] Soportar salida humana y `--json` validado.
+- [x] Confirmar contrato no destructivo: sin BD, sin `crawl:run`, sin siembra de jobs y sin pausas automáticas.

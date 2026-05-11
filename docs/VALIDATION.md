@@ -600,3 +600,21 @@ Criterios:
 - solo procesa `crawl-report-*.json` en `storage/crawler/reports/`;
 - no toca BD, no ejecuta crawler, no pausa dominios y no siembra jobs;
 - `--days` y `--keep` son excluyentes y deben ser enteros positivos.
+
+## Validación específica: crawl:report-show
+
+Comandos:
+
+```bash
+php bin/browser crawl:report-show --file=crawl-report-20260511-120000.json
+php bin/browser crawl:report-show --file=crawl-report-20260511-120000.json --json
+php bin/browser crawl:report-show --latest
+php bin/browser crawl:report-show --latest --domain=example.com
+```
+
+Criterios:
+- usa `--file` o `--latest` (exactamente uno);
+- `--domain` solo se permite con `--latest`;
+- valida patrón seguro `crawl-report-*.json` y rechaza rutas/path traversal;
+- solo lee `storage/crawler/reports/`;
+- no toca BD, no ejecuta crawler, no siembra jobs y no pausa dominios.
