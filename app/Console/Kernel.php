@@ -17,6 +17,7 @@ use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\CrawlReportStorageService;
 use Browser\Services\CrawlReportHistoryService;
 use Browser\Services\CrawlReportPruneService;
+use Browser\Services\CrawlReportShowService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -56,6 +57,7 @@ final class Kernel
             'crawl:report' => $this->crawlReport($argv),
             'crawl:report-history' => $this->crawlReportHistory($argv),
             'crawl:report-prune' => $this->crawlReportPrune($argv),
+            'crawl:report-show' => $this->crawlReportShow($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -89,6 +91,7 @@ final class Kernel
         $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura, opcional --save)');
         $this->line('  crawl:report-history Historial de snapshots JSON guardados por crawl:report --save (solo lectura)');
         $this->line('  crawl:report-prune Limpia snapshots antiguos (dry-run por defecto; borrar solo con --confirm)');
+        $this->line('  crawl:report-show Muestra un snapshot guardado (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -1006,6 +1009,96 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo limpiar snapshots del crawler.');
+            $this->line('Motivo: ' . $exception->getMessage());
+            return 1;
+        }
+    }
+
+    private function crawlReportShow(array $argv): int
+    {
+        $file = $this->readOptionValue($argv, 'file');
+        $latest = in_array('--latest', $argv, true);
+        $jsonMode = in_array('--json', $argv, true);
+        $domain = $this->readOptionValue($argv, 'domain');
+
+        if (($file === null && !$latest) || ($file !== null && $latest)) {
+            $this->line('[FAIL] Debes usar exactamente una opción: --file=FILENAME o --latest.');
+            return 1;
+        }
+
+        if ($file !== null && $domain !== null) {
+            $this->line('[FAIL] --domain solo se permite con --latest.');
+            return 1;
+        }
+
+        if ($domain !== null) {
+            $domain = trim($domain);
+            if ($domain === '') {
+                $this->line('[FAIL] --domain no puede estar vacío.');
+                return 1;
+            }
+        }
+
+        try {
+            $service = new CrawlReportShowService(BASE_PATH . '/storage/crawler/reports');
+            $snapshot = $latest ? $service->showLatest($domain) : $service->showByFilename((string) $file);
+            $report = (array) ($snapshot['report'] ?? []);
+
+            if ($jsonMode) {
+                $json = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                if (!is_string($json)) {
+                    $this->line('[FAIL] Snapshot JSON inválido.');
+                    return 1;
+                }
+                $this->line($json);
+                return 0;
+            }
+
+            $this->line('Crawler report snapshot');
+            $this->line('- file: ' . (string) ($snapshot['filename'] ?? '-'));
+            $this->line('- snapshot_date: ' . (string) (($report['snapshot_at'] ?? $report['generated_at'] ?? $report['created_at'] ?? 'no disponible')));
+            $filters = (array) ($report['filters'] ?? []);
+            if ($filters !== []) {
+                $this->line('- filters: domain=' . (string) (($filters['domain'] ?? null) ?? '-') . ', limit=' . (string) (($filters['limit'] ?? '-') ));
+            }
+
+            $this->line('');
+            $this->line('Jobs:');
+            foreach ((array) ($report['jobs'] ?? []) as $status => $count) {
+                $this->line(sprintf('- %s: %d', (string) $status, (int) $count));
+            }
+
+            $this->line('');
+            $this->line('URLs:');
+            foreach ((array) ($report['urls'] ?? []) as $status => $count) {
+                $this->line(sprintf('- %s: %d', (string) $status, (int) $count));
+            }
+
+            $indexed = (array) ($report['indexed_pages'] ?? []);
+            $this->line('');
+            $this->line('Indexed pages total: ' . (string) ($indexed['total'] ?? 'no disponible'));
+
+            $this->line('');
+            $this->line('Paused domains:');
+            foreach ((array) ($report['paused_domains'] ?? []) as $item) {
+                $this->line(sprintf('- %s | reason=%s', (string) ($item['domain'] ?? '-'), (string) ($item['reason'] ?? '-')));
+            }
+
+            $this->line('');
+            $this->line('Recommendations:');
+            foreach ((array) ($report['domain_advice'] ?? []) as $item) {
+                $this->line(sprintf('- %s | %s', (string) ($item['domain'] ?? '-'), (string) ($item['recommendation'] ?? '-')));
+            }
+
+            $this->line('');
+            $this->line('Recent errors:');
+            foreach ((array) ($report['recent_errors'] ?? []) as $item) {
+                $this->line(sprintf('- %s | http=%s | err=%s', (string) ($item['domain'] ?? '-'), (string) ($item['http_status'] ?? '-'), (string) ($item['error_message'] ?? '-')));
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo mostrar snapshot del crawler.');
             $this->line('Motivo: ' . $exception->getMessage());
             return 1;
         }

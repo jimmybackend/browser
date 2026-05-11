@@ -296,6 +296,9 @@ Este comando es estrictamente de lectura: no ejecuta crawler, no siembra jobs y 
 
 - `php bin/browser crawl:report --save` guarda snapshots JSON en `storage/crawler/reports/`.
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
+- `php bin/browser crawl:report-show --file=...` muestra contenido de un snapshot específico guardado.
+- `php bin/browser crawl:report-show --latest [--domain=example.com]` muestra el snapshot más reciente (global o por dominio).
+- `crawl:report-show` es **solo lectura**: no ejecuta crawler, no siembra jobs, no pausa dominios y no modifica BD.
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
 

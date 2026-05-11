@@ -250,6 +250,9 @@ El procesamiento real sigue siendo exclusivo de cron con `php bin/browser crawl:
 
 - `php bin/browser crawl:report --save` guarda snapshots JSON en `storage/crawler/reports/`.
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
+- `php bin/browser crawl:report-show --file=crawl-report-YYYYmmdd-HHMMSS.json` muestra un snapshot guardado (solo lectura).
+- `php bin/browser crawl:report-show --latest [--domain=example.com]` muestra el snapshot más reciente (solo lectura).
+- `crawl:report-show` solo lee dentro de `storage/crawler/reports/`, valida patrón `crawl-report-*.json`, bloquea path traversal y no toca BD/crawler/jobs/pausas.
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
 
