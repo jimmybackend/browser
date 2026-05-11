@@ -45,6 +45,7 @@ final class CrawlReportSummaryServiceTest extends TestCase
         $this->assertSame(2, $summary['analyzed_count']);
         $this->assertSame(1, $summary['invalid_count']);
         $this->assertSame('example.com', $summary['domain']);
+        $this->assertSame(100, $summary['indexed_pages']['first_total']);
         $this->assertSame(107, $summary['indexed_pages']['latest_total']);
         $this->assertSame(7, $summary['indexed_pages']['delta']);
         $this->assertSame(2, $summary['jobs_by_status_delta']['queued']['delta']);

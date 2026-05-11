@@ -30,7 +30,10 @@ final class CrawlReportSummaryService
             try {
                 $snapshot = $this->showService->showByFilename($filename);
                 $report = (array) ($snapshot['report'] ?? []);
-                $report['_meta'] = ['filename' => $filename];
+                $report['_meta'] = [
+                    'filename' => $filename,
+                    'order_key' => $this->resolveOrderKey($report, $item),
+                ];
                 $valid[] = $report;
             } catch (\RuntimeException $exception) {
                 if (str_contains($exception->getMessage(), 'JSON inválido')) {
@@ -49,7 +52,7 @@ final class CrawlReportSummaryService
                 'limit' => $limit,
                 'first_snapshot' => null,
                 'last_snapshot' => null,
-                'indexed_pages' => ['latest_total' => null, 'delta' => null],
+                'indexed_pages' => ['first_total' => null, 'latest_total' => null, 'delta' => null],
                 'jobs_by_status_delta' => [],
                 'urls_by_status_delta' => [],
                 'paused_domains_count' => null,
@@ -59,8 +62,10 @@ final class CrawlReportSummaryService
             ];
         }
 
-        $first = $valid[count($valid) - 1];
-        $last = $valid[0];
+        usort($valid, static fn (array $a, array $b): int => strcmp((string) (($a['_meta']['order_key'] ?? '')), (string) (($b['_meta']['order_key'] ?? ''))));
+
+        $first = $valid[0];
+        $last = $valid[count($valid) - 1];
 
         $indexedLatest = $this->extractIndexedTotal($last, $warnings, 'último');
         $indexedFirst = $this->extractIndexedTotal($first, $warnings, 'primero');
@@ -80,6 +85,7 @@ final class CrawlReportSummaryService
             'first_snapshot' => $this->snapshotMeta($first),
             'last_snapshot' => $this->snapshotMeta($last),
             'indexed_pages' => [
+                'first_total' => $indexedFirst,
                 'latest_total' => $indexedLatest,
                 'delta' => ($indexedLatest !== null && $indexedFirst !== null) ? ($indexedLatest - $indexedFirst) : null,
             ],
@@ -117,6 +123,23 @@ final class CrawlReportSummaryService
         return (int) $report['indexed_pages']['total'];
     }
 
+
+
+    /** @param array<string,mixed> $report @param array<string,mixed> $item */
+    private function resolveOrderKey(array $report, array $item): string
+    {
+        $snapshotAt = (string) ($report['snapshot_at'] ?? $report['generated_at'] ?? $report['created_at'] ?? '');
+        if ($snapshotAt !== '') {
+            return $snapshotAt;
+        }
+
+        $filenameTimestamp = (string) ($item['timestamp'] ?? '');
+        if ($filenameTimestamp !== '') {
+            return $filenameTimestamp;
+        }
+
+        return (string) ($item['modified_at'] ?? ($item['filename'] ?? ''));
+    }
     /** @param array<string,mixed> $report */
     private function listCount(array $report, string $key, array &$warnings): ?int
     {
