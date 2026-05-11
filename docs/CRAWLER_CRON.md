@@ -252,3 +252,11 @@ El procesamiento real sigue siendo exclusivo de cron con `php bin/browser crawl:
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
+
+## Limpieza de snapshots (crawl:report-prune)
+
+- Comando: `php bin/browser crawl:report-prune [--days=N|--keep=N] [--domain=example.com] [--confirm] [--json]`.
+- Por defecto corre en **dry-run** y usa `--days=30` si no se pasa criterio.
+- Solo considera archivos `crawl-report-*.json` dentro de `storage/crawler/reports/`.
+- Solo borra con `--confirm`; sin `--confirm` solo lista candidatos.
+- No toca base de datos, no ejecuta `crawl:run`, no pausa dominios, no siembra jobs.

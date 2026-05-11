@@ -312,3 +312,12 @@
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
+
+## Fase 30: Limpieza segura de snapshots del crawler
+
+- [x] Agregar comando `crawl:report-prune` en `Kernel` y `help`.
+- [x] Implementar `CrawlReportPruneService` para seleccionar/borrar snapshots solo en `storage/crawler/reports/`.
+- [x] Definir dry-run por defecto con criterio seguro (`--days=30`).
+- [x] Soportar `--days`, `--keep`, `--domain`, `--confirm`, `--json` con validaciones seguras.
+- [x] Ignorar archivos fuera del patrón `crawl-report-*.json` y evitar path traversal.
+- [x] Confirmar alcance no destructivo: sin cambios de BD, sin `crawl:run`, sin pausa automática, sin jobs.

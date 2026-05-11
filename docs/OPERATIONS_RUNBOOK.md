@@ -298,3 +298,7 @@ Este comando es estrictamente de lectura: no ejecuta crawler, no siembra jobs y 
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
+
+- `php bin/browser crawl:report-prune --days=30` (dry-run por defecto para snapshots viejos).
+- `php bin/browser crawl:report-prune --keep=50 --confirm` (borra snapshots excedentes manteniendo los 50 más recientes).
+- Seguridad: trabaja únicamente en `storage/crawler/reports/` y evita path traversal usando nombres seguros `crawl-report-*.json`.
