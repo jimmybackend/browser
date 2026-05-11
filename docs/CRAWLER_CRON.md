@@ -263,3 +263,12 @@ El procesamiento real sigue siendo exclusivo de cron con `php bin/browser crawl:
 - Solo considera archivos `crawl-report-*.json` dentro de `storage/crawler/reports/`.
 - Solo borra con `--confirm`; sin `--confirm` solo lista candidatos.
 - No toca base de datos, no ejecuta `crawl:run`, no pausa dominios, no siembra jobs.
+
+
+## crawl:report-diff (solo lectura)
+
+- Compara dos snapshots guardados en `storage/crawler/reports/`.
+- Modos: `--from=... --to=...` o `--latest=2` (opcional `--domain=example.com` solo con latest).
+- Opción `--json` para salida máquina.
+- No modifica BD, no ejecuta crawler, no pausa dominios y no siembra jobs.
+- Para borrar snapshots usar `crawl:report-prune`.
