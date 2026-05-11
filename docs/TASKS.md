@@ -304,3 +304,11 @@
 - [x] Manejar errores de escritura con exit code `1` y mensaje claro.
 - [x] Agregar pruebas PHPUnit para guardado, sanitización de nombre y contrato de solo lectura.
 - [x] Confirmar que no hay cambios en migraciones, esquema BD, `.env`, Nginx ni políticas de pausa automática.
+
+
+## Historial de snapshots de crawler
+
+- `php bin/browser crawl:report --save` guarda snapshots JSON en `storage/crawler/reports/`.
+- `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
+- Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
+- No pausa dominios, no siembra jobs y no hay auto-deploy.

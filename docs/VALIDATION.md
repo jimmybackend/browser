@@ -574,3 +574,11 @@ Criterios:
 - nombre de archivo sanitizado (sin rutas arbitrarias/path traversal);
 - mantiene contrato previo de salida humana/JSON;
 - no ejecuta crawler, no siembra jobs, no pausa dominios, no modifica `domain-policy.json` ni tablas.
+
+
+## Historial de snapshots de crawler
+
+- `php bin/browser crawl:report --save` guarda snapshots JSON en `storage/crawler/reports/`.
+- `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
+- Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
+- No pausa dominios, no siembra jobs y no hay auto-deploy.
