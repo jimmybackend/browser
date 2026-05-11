@@ -582,3 +582,21 @@ Criterios:
 - `php bin/browser crawl:report-history` lista snapshots guardados (solo lectura).
 - Soporta `--json`, `--limit` y `--domain` para filtrar resultados sin modificar BD ni ejecutar crawler.
 - No pausa dominios, no siembra jobs y no hay auto-deploy.
+
+## Validación específica: crawl:report-prune
+
+Comandos:
+
+```bash
+php bin/browser crawl:report-prune
+php bin/browser crawl:report-prune --days=30
+php bin/browser crawl:report-prune --days=30 --confirm
+php bin/browser crawl:report-prune --keep=50
+php bin/browser crawl:report-prune --json
+```
+
+Criterios:
+- dry-run por defecto (sin `--confirm` no borra);
+- solo procesa `crawl-report-*.json` en `storage/crawler/reports/`;
+- no toca BD, no ejecuta crawler, no pausa dominios y no siembra jobs;
+- `--days` y `--keep` son excluyentes y deben ser enteros positivos.

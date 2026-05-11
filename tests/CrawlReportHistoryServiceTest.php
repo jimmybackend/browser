@@ -72,6 +72,18 @@ final class CrawlReportHistoryServiceTest extends TestCase
         $this->assertStringNotContainsString('pause(', $body);
     }
 
+
+    public function testKernelRegistersPruneCommandAsSafe(): void
+    {
+        $kernel = (string) file_get_contents(dirname(__DIR__) . '/app/Console/Kernel.php');
+        $this->assertStringContainsString('crawl:report-prune', $kernel);
+
+        $body = $this->extractMethodBody($kernel, 'crawlReportPrune');
+        $this->assertStringContainsString('storage/crawler/reports', $body);
+        $this->assertStringNotContainsString('crawlRun(', $body);
+        $this->assertStringNotContainsString('CrawlJob::create(', $body);
+        $this->assertStringNotContainsString('domain-policy.json', $body);
+    }
     private function extractMethodBody(string $source, string $methodName): string
     {
         $signature = 'private function ' . $methodName . '(';

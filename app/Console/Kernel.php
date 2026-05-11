@@ -16,6 +16,7 @@ use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\CrawlReportStorageService;
 use Browser\Services\CrawlReportHistoryService;
+use Browser\Services\CrawlReportPruneService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -54,6 +55,7 @@ final class Kernel
             'crawl:domain-advice' => $this->crawlDomainAdvice($argv),
             'crawl:report' => $this->crawlReport($argv),
             'crawl:report-history' => $this->crawlReportHistory($argv),
+            'crawl:report-prune' => $this->crawlReportPrune($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -86,6 +88,7 @@ final class Kernel
         $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
         $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura, opcional --save)');
         $this->line('  crawl:report-history Historial de snapshots JSON guardados por crawl:report --save (solo lectura)');
+        $this->line('  crawl:report-prune Limpia snapshots antiguos (dry-run por defecto; borrar solo con --confirm)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -954,6 +957,60 @@ final class Kernel
         }
     }
 
+
+    private function crawlReportPrune(array $argv): int
+    {
+        $daysRaw = $this->readOptionValue($argv, 'days');
+        $keepRaw = $this->readOptionValue($argv, 'keep');
+        if ($daysRaw !== null && $keepRaw !== null) { $this->line('[FAIL] Usa solo uno: --days o --keep.'); return 1; }
+
+        $days = $daysRaw !== null ? $this->parsePositiveInt($daysRaw) : 30;
+        $keep = $keepRaw !== null ? $this->parsePositiveInt($keepRaw) : null;
+        if ($daysRaw !== null && $days === null) { $this->line('[FAIL] --days debe ser entero positivo.'); return 1; }
+        if ($keepRaw !== null && $keep === null) { $this->line('[FAIL] --keep debe ser entero positivo.'); return 1; }
+
+        $domain = $this->readOptionValue($argv, 'domain');
+        if ($domain !== null && trim($domain) === '') { $this->line('[FAIL] --domain no puede estar vacío.'); return 1; }
+
+        $confirm = in_array('--confirm', $argv, true);
+        $jsonMode = in_array('--json', $argv, true);
+        $dryRun = !$confirm;
+        $criteria = $keep !== null ? ['mode' => 'keep', 'keep' => $keep] : ['mode' => 'days', 'days' => $days];
+
+        try {
+            $service = new CrawlReportPruneService(BASE_PATH . '/storage/crawler/reports');
+            $listed = $service->listSafeFiles($domain);
+            if (!$listed['exists']) {
+                $payload = ['dry_run'=>$dryRun,'confirmed'=>$confirm,'criteria'=>$criteria,'matched_count'=>0,'deleted_count'=>0,'files'=>[]];
+                if ($jsonMode) { $this->line((string) json_encode($payload, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)); }
+                else { $this->line('Directorio de snapshots no existe: storage/crawler/reports/.'); }
+                return 0;
+            }
+
+            $targets = $keep !== null ? $service->selectByKeep($listed['files'], $keep) : $service->selectByDays($listed['files'], $days);
+            usort($targets, static fn(array $a,array $b): int => $a['mtime'] <=> $b['mtime']);
+            $files = array_map(static fn(array $f): string => 'storage/crawler/reports/' . $f['filename'], $targets);
+
+            $deleted = 0;
+            if ($confirm && $targets !== []) { $deleted = $service->delete($targets); }
+
+            $payload = ['dry_run'=>$dryRun,'confirmed'=>$confirm,'criteria'=>$criteria,'matched_count'=>count($targets),'deleted_count'=>$deleted,'files'=>$files];
+            if ($jsonMode) { $this->line((string) json_encode($payload, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)); return 0; }
+
+            $this->line('Criterio: ' . ($keep !== null ? ('keep=' . $keep) : ('days=' . $days)));
+            $this->line('Modo: ' . ($dryRun ? 'dry-run (sin borrado)' : 'confirmado (borrado activo)'));
+            if ($files === []) { $this->line('No hay snapshots para limpiar.'); return 0; }
+            foreach ($files as $f) { $this->line('- ' . ($dryRun ? '[DRY-RUN] ' : '[DELETED] ') . $f); }
+            $this->line('Total seleccionados: ' . count($files));
+            $this->line('Total borrados: ' . $deleted);
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo limpiar snapshots del crawler.');
+            $this->line('Motivo: ' . $exception->getMessage());
+            return 1;
+        }
+    }
+
     private function crawlReport(array $argv): int
     {
         Env::load(BASE_PATH);
@@ -1526,6 +1583,13 @@ final class Kernel
         }
 
         return null;
+    }
+
+    private function parsePositiveInt(string $raw): ?int
+    {
+        if (!preg_match('/^\d+$/', $raw)) { return null; }
+        $value = (int) $raw;
+        return $value > 0 ? $value : null;
     }
 
     private function parseIntOption(array $argv, string $name, int $default, int $min, int $max): ?int
