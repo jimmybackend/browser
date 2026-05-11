@@ -15,6 +15,7 @@ use Browser\Services\CrawlDomainAdviceService;
 use Browser\Services\CrawlSeedJobEnqueuer;
 use Browser\Services\CrawlOperationalReportService;
 use Browser\Services\CrawlReportStorageService;
+use Browser\Services\CrawlReportHistoryService;
 use Browser\Services\RobotsTxtService;
 use Browser\Services\RobotsTxtSitemapDiscoveryService;
 use Browser\Services\SearchService;
@@ -52,6 +53,7 @@ final class Kernel
             'crawl:domains' => $this->crawlDomains($argv),
             'crawl:domain-advice' => $this->crawlDomainAdvice($argv),
             'crawl:report' => $this->crawlReport($argv),
+            'crawl:report-history' => $this->crawlReportHistory($argv),
             'crawl:domain-policy' => $this->crawlDomainPolicy($argv),
             'index:status' => $this->indexStatus(),
             'doctor' => $this->doctor(),
@@ -83,6 +85,7 @@ final class Kernel
         $this->line('  crawl:domains Resumen operativo por dominio (solo lectura)');
         $this->line('  crawl:domain-advice Recomendaciones de pausa manual por dominio (solo lectura)');
         $this->line('  crawl:report  Reporte operativo unificado del crawler (solo lectura, opcional --save)');
+        $this->line('  crawl:report-history Historial de snapshots JSON guardados por crawl:report --save (solo lectura)');
         $this->line('  index:status  Diagnóstico de índice y crawler');
 
         return 0;
@@ -894,6 +897,59 @@ final class Kernel
             return 0;
         } catch (Throwable $exception) {
             $this->line('[FAIL] No se pudo obtener crawl:domain-advice. Verifica conexión a base de datos.');
+            return 1;
+        }
+    }
+
+
+    private function crawlReportHistory(array $argv): int
+    {
+        $limit = $this->parseIntOption($argv, 'limit', 10, 1, 100);
+        if ($limit === null) {
+            $this->line('[FAIL] --limit debe ser entero entre 1 y 100.');
+            return 1;
+        }
+
+        $domain = $this->readOptionValue($argv, 'domain');
+        if ($domain !== null) {
+            $domain = trim($domain);
+            if ($domain === '') {
+                $this->line('[FAIL] --domain no puede estar vacío.');
+                return 1;
+            }
+        }
+
+        $jsonMode = in_array('--json', $argv, true);
+
+        try {
+            $service = new CrawlReportHistoryService(BASE_PATH . '/storage/crawler/reports');
+            $items = $service->list($limit, $domain);
+
+            if ($jsonMode) {
+                $this->line((string) json_encode($items, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                return 0;
+            }
+
+            if ($items === []) {
+                $this->line('No saved crawler reports found.');
+                return 0;
+            }
+
+            foreach ($items as $item) {
+                $this->line(sprintf(
+                    '- file=%s | path=%s | size=%d bytes | modified_at=%s | domain=%s',
+                    (string) ($item['filename'] ?? '-'),
+                    (string) ($item['relative_path'] ?? '-'),
+                    (int) ($item['size_bytes'] ?? 0),
+                    (string) ($item['modified_at'] ?? '-'),
+                    (string) (($item['domain'] ?? null) ?? '-')
+                ));
+            }
+
+            return 0;
+        } catch (Throwable $exception) {
+            $this->line('[FAIL] No se pudo listar historial de snapshots del crawler.');
+            $this->line('Motivo: ' . $exception->getMessage());
             return 1;
         }
     }

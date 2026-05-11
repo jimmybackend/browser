@@ -18,7 +18,7 @@ final class CrawlReportStorageService
     {
         $this->ensureReportsDirectory();
 
-        $domainPart = $this->sanitizeDomainForFilename($domain);
+        $domainPart = self::sanitizeDomainForFilename($domain);
         $timestamp = gmdate('Ymd-His');
         $filename = $domainPart === null
             ? sprintf('crawl-report-%s.json', $timestamp)
@@ -59,7 +59,7 @@ final class CrawlReportStorageService
         }
     }
 
-    private function sanitizeDomainForFilename(?string $domain): ?string
+    public static function sanitizeDomainForFilename(?string $domain): ?string
     {
         if ($domain === null) {
             return null;
